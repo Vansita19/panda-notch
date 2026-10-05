@@ -1,0 +1,12 @@
+node_modules
+dist/
+.astro/
+.vercel/
+.env
+.env.*
+.DS_Store
+*.log
+*.app/
+*.dmg
+backups/
+output/

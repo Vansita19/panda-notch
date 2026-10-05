@@ -1,0 +1,103 @@
+const minute=60000;
+export const stepTimerMinutes=(value,direction)=>Math.max(1,Math.min(120,(direction>0?Math.floor(value/5)+1:Math.ceil(value/5)-1)*5));
+export const dayKey=(now=Date.now())=>{const d=new Date(now);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
+export const visibleTasks=(s,now=Date.now())=>s.tasks.filter(t=>!t.done||t.completedDay===dayKey(now));
+export function taskProgress(s,now=Date.now()){const tasks=visibleTasks(s,now);return {done:tasks.filter(t=>t.done).length,total:tasks.length};}
+const uid=()=>globalThis.crypto.randomUUID();
+export const messages=[{title:'Drink water, buddy.',sub:'A little sip. A little reset.',kind:'water'},{title:'Stretch your paws.',sub:'Your shoulders deserve a tiny break.',kind:'stretch'},{title:'Look up. Look far.',sub:'Give those lovely eyes a moment.',kind:'eyes'},{title:'One small thing at a time.',sub:'You’re doing better than you think.',kind:'kind'}];
+export const durations=(s,mode)=>({focus:s.settings.focusMinutes,short:s.settings.shortMinutes,long:s.settings.longMinutes}[mode]*60);
+const timerNotice=(mode,now)=>({kind:'timer',id:uid(),at:now,title:mode==='focus'?'Ready for a fresh start?':'You did it. Take a break.',sub:mode==='focus'?'Your next focus session is ready.':'Your break is ready when you are.'});
+export function initialState(now=Date.now()){
+ return {version:1,calendar:{mode:'sample',selectedIds:[]},notes:[],brainDump:'',reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false};
+}
+export function sampleEvents(now){return [{id:uid(),title:'A little planning time',start:now+20*minute,end:now+50*minute,color:'blue'},{id:uid(),title:'Make room for creative work',start:now+90*minute,end:now+150*minute,color:'peach'}];}
+export function remaining(t,now=Date.now()){return Math.max(0,Math.ceil(t.seconds-(t.running?Math.max(0,now-t.startedAt)/1000:0)));}
+export function validateState(x){
+ const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
+ const fail=()=>{throw Error('This backup is not a valid Panda file. Your current data is safe.');};
+ if(!x||x.version!==1||!Array.isArray(x.tasks)||x.tasks.length>5000||!Array.isArray(x.events)||x.events.length>1000)fail();
+ if(x.lastGreetingDay!=null&&(typeof x.lastGreetingDay!=='string'||!/^\d{4}-\d{1,2}-\d{1,2}$/.test(x.lastGreetingDay)))fail();
+ if(x.brainDump!==undefined&&(typeof x.brainDump!=='string'||x.brainDump.length>100000))fail();
+ if(x.calendar!==undefined&&(!record(x.calendar)||!['sample','connected','off'].includes(x.calendar.mode)||!Array.isArray(x.calendar.selectedIds)||x.calendar.selectedIds.length>100||x.calendar.selectedIds.some(id=>typeof id!=='string'||id.length>500)))fail();
+ if(x.notes!==undefined){if(!Array.isArray(x.notes)||x.notes.length>5000)fail();const ids=new Set();for(const n of x.notes){if(!record(n)||typeof n.id!=='string'||ids.has(n.id)||typeof n.body!=='string'||!n.body.trim()||n.body.length>100000||!Number.isFinite(n.created))fail();ids.add(n.id);}}
+ if(x.reminders!==undefined){if(!Array.isArray(x.reminders)||x.reminders.length>100)fail();const ids=new Set();for(const r of x.reminders){if(typeof r.id!=='string'||ids.has(r.id)||typeof r.title!=='string'||!r.title.trim()||r.title.length>100||typeof r.enabled!=='boolean'||!Number.isFinite(r.intervalMinutes)||r.intervalMinutes<1||r.intervalMinutes>1440||!Number.isFinite(r.lastFired))fail();ids.add(r.id);}}
+ const ids=new Set();for(const t of x.tasks){if(typeof t.id!=='string'||ids.has(t.id)||typeof t.title!=='string'||!t.title.trim()||t.title.length>500||!['today','later'].includes(t.section)||typeof t.done!=='boolean'||typeof t.pinned!=='boolean'||!Number.isFinite(t.created)||(t.due!==null&&!Number.isFinite(t.due)))fail();ids.add(t.id);}
+ const eids=new Set();for(const e of x.events){if(typeof e.id!=='string'||eids.has(e.id)||typeof e.title!=='string'||!e.title.trim()||e.title.length>500||!Number.isFinite(e.start)||!Number.isFinite(e.end)||e.end<=e.start)fail();eids.add(e.id);}
+ if(x.timer?.completedAt!=null&&(!Number.isFinite(x.timer.completedAt)||x.timer.completedAt<0))fail();
+ if(x.pendingTimerMode!=null&&!['focus','short','long'].includes(x.pendingTimerMode))fail();
+ if(x.settings?.mascotSounds!==undefined&&typeof x.settings.mascotSounds!=='boolean')fail();
+ if(x.settings?.mascotName!==undefined&&(typeof x.settings.mascotName!=='string'||x.settings.mascotName.length>24))fail();
+ const s=x.settings,t=x.timer;if(!s||!t||!['focus','short','long'].includes(t.mode)||typeof t.running!=='boolean'||!Number.isFinite(t.seconds)||t.seconds<0||t.seconds>7200||!Number.isInteger(t.sessions)||t.sessions<0||(t.running&&!Number.isFinite(t.startedAt)))fail();
+ for(const k of ['focusMinutes','shortMinutes','longMinutes'])if(!Number.isFinite(s[k])||s[k]<1||s[k]>120)fail();
+ for(const k of ['nudgeMinutes','leadMinutes'])if(!Number.isFinite(s[k])||s[k]<1||s[k]>240)fail();
+ for(const k of ['startHour','endHour'])if(!Number.isInteger(s[k])||s[k]<0||s[k]>23)fail();
+ if(typeof s.quiet!=='boolean'||typeof s.sound!=='boolean'||typeof s.reducedMotion!=='boolean'||!Number.isFinite(s.pausedUntil)||!s.categories||messages.some(m=>typeof s.categories[m.kind]!=='boolean'))fail();
+ if(typeof x.draft!=='string'||x.draft.length>500||!Number.isFinite(x.lastNudge)||!Number.isInteger(x.nudgeIndex)||x.nudgeIndex<0||!record(x.seen)||!record(x.snoozed))fail();
+ for(const value of Object.values(x.seen))if(typeof value!=='boolean')fail();
+ if(x.nudgeSnooze!=null&&(!Number.isFinite(x.nudgeSnooze)||x.nudgeSnooze<0))fail();
+ for(const value of Object.values(x.snoozed))if(!Number.isFinite(value))fail();
+ return structuredClone(x);
+}
+export function restore(x){const s=validateState(x);s.brainDump??='';s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,lastFired:Date.now()}];s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return s;}
+export function reduce(state,a,now=Date.now()){
+ if(a.type==='checkpoint'&&!state.timer.running)return state;
+ const s=structuredClone(state),t=s.timer;
+ switch(a.type){
+ case 'add':{const title=a.title.trim().slice(0,500);if(!title)return state;s.tasks.push({id:uid(),title,section:a.section==='later'?'later':'today',done:false,pinned:false,created:now,due:null});s.draft='';break;}
+ case 'saveNote':{const body=s.brainDump.trim();if(!body||s.notes.length>=5000)return state;s.notes.unshift({id:uid(),body,created:now});s.brainDump='';break;}
+ case 'deleteNote':s.notes=s.notes.filter(n=>n.id!==a.id);break;
+ case 'restoreNote':if(!s.notes.some(n=>n.id===a.note.id))s.notes.splice(Math.min(a.index,s.notes.length),0,a.note);break;
+ case 'brainDump':s.brainDump=a.value.slice(0,100000);break;
+ case 'addReminder':if(a.title.trim())s.reminders.push({id:uid(),title:a.title.trim().slice(0,100),intervalMinutes:Math.min(1440,Math.max(1,Number(a.intervalMinutes)||60)),enabled:true,lastFired:now});break;
+ case 'toggleReminder':s.reminders=s.reminders.map(r=>r.id===a.id?{...r,enabled:!r.enabled,lastFired:now}:r);break;
+ case 'deleteReminder':s.reminders=s.reminders.filter(r=>r.id!==a.id);break;
+ case 'editReminder':s.reminders=s.reminders.map(r=>r.id===a.id?{...r,intervalMinutes:Math.min(1440,Math.max(1,Number(a.intervalMinutes)||60)),lastFired:now}:r);break;
+ case 'draft':s.draft=a.value.slice(0,500);break;
+ case 'toggle':s.tasks=s.tasks.map(v=>v.id===a.id?{...v,done:!v.done,completedDay:v.done?null:dayKey(now),pinned:false}:v);break;
+ case 'edit':s.tasks=s.tasks.map(v=>v.id===a.id?{...v,title:a.title?.trim().slice(0,500)||v.title,section:a.section??v.section,due:a.due===undefined?v.due:a.due}:v);break;
+ case 'pin':s.tasks=s.tasks.map(v=>({...v,pinned:v.id===a.id&&!v.pinned&&!v.done}));break;
+ case 'delete':s.tasks=s.tasks.filter(v=>v.id!==a.id);break;
+ case 'restoreTask':s.tasks.splice(Math.min(a.index,s.tasks.length),0,a.task);break;
+ case 'move':{const i=s.tasks.findIndex(v=>v.id===a.id),j=i+a.delta;if(i>=0&&j>=0&&j<s.tasks.length)[s.tasks[i],s.tasks[j]]=[s.tasks[j],s.tasks[i]];break;}
+ case 'reorder':s.tasks=a.ids.map(id=>s.tasks.find(v=>v.id===id)).filter(Boolean);break;
+ case 'settings':{const before=durations(s,t.mode);Object.assign(s.settings,a.patch);if(!t.running&&durations(s,t.mode)!==before)t.seconds=durations(s,t.mode);if(a.patch.quiet)s.alert=null;break;}
+ case 'timerStart':s.pendingTimerMode=null;t.running=true;t.startedAt=now;break;
+ case 'checkpoint':if(t.running){t.seconds=remaining(t,now);t.startedAt=now;}break;
+ case 'timerPause':case 'sleep':t.seconds=remaining(t,now);t.running=false;t.startedAt=null;if(a.type==='sleep')s.lastNudge=now;break;
+ // Give the user a minute after waking, without resetting every reminder's cadence.
+ case 'wake':s.lastNudge=now;break;
+ case 'timerReset':s.pendingTimerMode=null;t.running=false;t.startedAt=null;t.seconds=durations(s,t.mode);break;
+ case 'timerMode':s.pendingTimerMode=null;t.mode=a.mode;t.running=false;t.startedAt=null;t.seconds=durations(s,t.mode);break;
+ case 'timerTask':t.taskId=a.id||null;break;
+ case 'addEvent':s.events.push({id:uid(),title:a.title.trim().slice(0,500),start:a.start,end:a.end,color:'blue'});break;
+ case 'deleteEvent':s.events=s.events.filter(e=>e.id!==a.id);break;
+ case 'calendarSelect':s.calendar={mode:'connected',selectedIds:[...new Set(a.ids)]};s.events=[];s.seen={};s.snoozed={};if(s.alert?.kind==='event')s.alert=null;break;
+ case 'calendarDisconnect':s.calendar={mode:'off',selectedIds:[]};s.events=[];s.seen={};s.snoozed={};if(s.alert?.kind==='event')s.alert=null;break;
+ case 'calendarSnapshot':if(s.calendar.mode!=='connected'||JSON.stringify(s.events)===JSON.stringify(a.events))return state;s.events=a.events;{const keys=new Set(s.events.map(e=>`${e.id}:${e.start}`));for(const key of Object.keys(s.seen))if(!keys.has(key)&&!s.tasks.some(t=>`${t.id}:${t.due}`===key))delete s.seen[key];}break;
+ case 'sampleEvents':s.calendar={mode:'sample',selectedIds:[]};s.events=sampleEvents(now);s.seen={};s.snoozed={};break;
+ case 'dismissAlert':case 'snoozeAlert':{
+  const al=s.alert;if(al){if(a.type==='snoozeAlert'&&(al.kind==='event'||al.kind==='task')){s.snoozed[al.key]=now+5*minute;delete s.seen[al.key];}else if(a.type==='snoozeAlert'&&al.kind==='wellness'){s.nudgeSnooze=now+15*minute;s.snoozedCategory=al.category;s.snoozedTitle=al.title;}}s.alert=null;break;
+ }
+ case 'nudge':{const m={kind:'water',title:a.title||'Drink water, buddy.',sub:'A little sip. A little reset.'};s.alert={...m,kind:'wellness',category:m.kind,id:uid(),at:now};s.nudgeIndex++;s.lastNudge=now;break;}
+ case 'welcome':s.welcomed=true;break;
+ default:return state;
+ }
+ return s;
+}
+export function canNudge(s,now){const h=new Date(now).getHours(),c=s.settings;const inHours=c.startHour===c.endHour?true:c.startHour<c.endHour?h>=c.startHour&&h<c.endHour:h>=c.startHour||h<c.endHour;return inHours&&!c.quiet&&now>=c.pausedUntil&&!(s.timer.running&&s.timer.mode==='focus')&&(s.nudgeSnooze?now>=s.nudgeSnooze:now-s.lastNudge>=minute&&(s.reminders?.some(r=>r.enabled&&now-r.lastFired>=r.intervalMinutes*minute)||now-s.lastNudge>=c.nudgeMinutes*minute&&s.reminders===undefined))&&(s.reminders?.some(r=>r.enabled)??messages.some(m=>c.categories[m.kind]));}
+export function advance(state,now=Date.now()){
+ let s=state;const mutate=()=>{if(s===state)s=structuredClone(state);};
+ if(s.timer.running&&remaining(s.timer,now)===0){mutate();const t=s.timer;t.completedAt=now;if(t.mode==='focus'){t.sessions++;t.mode=t.sessions%4===0?'long':'short';}else t.mode='focus';t.seconds=durations(s,t.mode);t.running=false;t.startedAt=null;if(!s.alert)s.alert=timerNotice(t.mode,now);else s.pendingTimerMode=t.mode;}
+ if(s.alert?.kind==='event'&&(now-s.alert.at>=3000||!s.events.some(e=>`${e.id}:${e.start}`===s.alert.key&&e.end>now))){mutate();s.alert=null;}
+ if(s.alert?.kind==='task'&&!s.tasks.some(t=>`${t.id}:${t.due}`===s.alert.key&&!t.done)){mutate();s.alert=null;}
+ if(['wellness','timer'].includes(s.alert?.kind)&&now-s.alert.at>18000){mutate();s.alert=null;}
+ if(!s.settings.quiet){
+  const candidates=s.events.filter(e=>!e.allDay&&now>=e.start-s.settings.leadMinutes*minute&&now<e.end).sort((a,b)=>a.start-b.start).map(e=>({kind:'event',key:`${e.id}:${e.start}`,title:e.title,sub:'Your next little commitment',start:e.start}));
+  for(const t of s.tasks.filter(t=>!t.done&&t.due&&now>=t.due))candidates.push({kind:'task',key:`${t.id}:${t.due}`,title:t.title,sub:'A task you wanted to remember'});
+  const next=candidates.find(a=>!s.seen[a.key]&&!(s.snoozed[a.key]>now));
+  if(next&&(!s.alert||['wellness','timer'].includes(s.alert.kind))){mutate();if(s.alert?.kind==='timer')s.pendingTimerMode=s.timer.mode;s.alert={...next,id:uid(),at:now};s.seen[next.key]=true;}
+ }
+ if(!s.alert&&s.pendingTimerMode){mutate();s.alert=timerNotice(s.pendingTimerMode,now);s.pendingTimerMode=null;}
+ if(!s.alert&&canNudge(s,now)){mutate();const due=s.reminders?.filter(r=>r.enabled&&now-r.lastFired>=r.intervalMinutes*minute).sort((a,b)=>(a.lastFired+a.intervalMinutes*minute)-(b.lastFired+b.intervalMinutes*minute))[0];const title=s.nudgeSnooze?s.snoozedTitle:due?.title||'Drink water, buddy.';s.alert={kind:'wellness',title,sub:'A little moment for you.',category:due?.id||'water',id:uid(),at:now};if(due)due.lastFired=now;s.nudgeIndex++;s.lastNudge=now;s.nudgeSnooze=null;s.snoozedCategory=null;s.snoozedTitle=null;}
+ return s;
+}
