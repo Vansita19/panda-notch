@@ -7,9 +7,11 @@ import SegmentedControl from './arc/segmented-control/segmented-control';
 import {Checkbox} from './arc/checkbox/checkbox';
 import {ResizeCorners} from './components/ResizeCorners';
 import {TaskPlanner} from './components/TaskPlanner';
+import {TaskPriority} from './components/TaskPriority';
 import {MenuHome} from './components/MenuHome';
 import {navigationOptions} from './navigation';
 import {writeCalendar} from './calendar-write';
+import {deleteTaskWithCalendar} from './task-calendar-actions.mjs';
 import {Pins} from './components/Pins';
 import {FocusTimer} from './components/FocusTimer';
 import {Panda,PandaBanner} from './components/Panda';
@@ -24,7 +26,7 @@ const fmt=(s:number)=>`${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).t
 const dateInput=(n:number)=>{const d=new Date(n);return new Date(n-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
 function load(){try{const x=window.__PANDA_SAVED__??JSON.parse(localStorage.getItem('panda-state')||'null');return x?restore(x):initialState();}catch{window.__PANDA_CONFIG__={...window.__PANDA_CONFIG__,storageWarning:'Your saved data could not be read. A backup is preserved; export this session before closing.'};return initialState();}}
 export default function App(){
- const [s,setS]=useState(load),[now,setNow]=useState(Date.now()),[open,setOpen]=useState(!native),[closing,setClosing]=useState(false),[addingTodo,setAddingTodo]=useState(false),[tab,setTab]=useState('today'),[section,setSection]=useState('today'),[edit,setEdit]=useState<any>(null),[toast,setToast]=useState<any>(null),[celebrate,setCelebrate]=useState(false),[config,setConfig]=useState(window.__PANDA_CONFIG__||{availableHeight:window.innerHeight-20}),[storageError,setStorageError]=useState(window.__PANDA_CONFIG__?.storageWarning||''),[drag,setDrag]=useState<string|null>(null),[peek,setPeek]=useState(false),[editingTask,setEditingTask]=useState<string|null>(null),[taskTitle,setTaskTitle]=useState(''),[petLine,setPetLine]=useState(''),[calendarInfo,setCalendarInfo]=useState<any>({status:'notConnected',calendars:[]});
+ const [s,setS]=useState(load),[now,setNow]=useState(Date.now()),[open,setOpen]=useState(!native),[closing,setClosing]=useState(false),[addingTodo,setAddingTodo]=useState(false),[tab,setTab]=useState('today'),[section,setSection]=useState('today'),[edit,setEdit]=useState<any>(null),[toast,setToast]=useState<any>(null),[celebrate,setCelebrate]=useState(false),[config,setConfig]=useState(window.__PANDA_CONFIG__||{availableHeight:window.innerHeight-20}),[storageError,setStorageError]=useState(window.__PANDA_CONFIG__?.storageWarning||''),[drag,setDrag]=useState<string|null>(null),[peek,setPeek]=useState(false),[petLine,setPetLine]=useState(''),[calendarInfo,setCalendarInfo]=useState<any>({status:'notConnected',calendars:[]});
  const [planning,setPlanning]=useState(false),[planningLayout,setPlanningLayout]=useState(false),[planningContracting,setPlanningContracting]=useState(false),[plannerGeometry,setPlannerGeometry]=useState<{width:number;height:number}|null>(null),[music,setMusic]=useState<any>(null),[showNavigation,setShowNavigation]=useState(false);
  useEffect(()=>host('musicEnabled',{enabled:s.settings.musicEnabled===true}),[s.settings.musicEnabled]);
  const planningRef=useRef(false),contractionRef=useRef(false);planningRef.current=planning;
@@ -33,18 +35,20 @@ export default function App(){
  const setPlannerExpanded=(expanded:boolean)=>{
   if(planningRef.current===expanded)return;
   planningRef.current=expanded;
-  if(expanded){contractionRef.current=false;setPlanningContracting(false);setPlanningLayout(true);setPlanning(true);host('calendarRefresh');return;}
+  if(expanded){contractionRef.current=false;setPlanningContracting(false);setPlanningLayout(true);setPlanning(true);return;}
   const checklist=layout.current?.querySelector<HTMLElement>('.task-checklist');
   setPlannerGeometry({width:surface.current?.offsetWidth||400,height:Math.ceil(checklist?.offsetHeight||0)});
   contractionRef.current=true;setPlanningContracting(true);setPlanning(false);
  };
  const petTimer=useRef<any>(null),petIndex=useRef(0);
  const openRef=useRef(open);openRef.current=open;
- const visual=useRef<HTMLDivElement>(null),layout=useRef<HTMLDivElement>(null),view=useRef<HTMLDivElement>(null);
+ const visual=useRef<HTMLDivElement>(null),layout=useRef<HTMLDivElement>(null),view=useRef<HTMLDivElement>(null),panelBody=useRef<HTMLDivElement>(null),bodyAnimation=useRef<Animation|null>(null),toastPosition=useRef<HTMLDivElement>(null);
  const stateRef=useRef(s),input=useRef<HTMLInputElement>(null),surface=useRef<HTMLDivElement>(null),hoverTimer=useRef<any>(null),toastTimer=useRef<any>(null),celebrateTimer=useRef<any>(null);
  stateRef.current=s;
+ const taskRestoreWaiters=useRef(new Map<string,{resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>()),deletingTasks=useRef(new Set<string>());
+ useEffect(()=>()=>{for(const waiter of taskRestoreWaiters.current.values()){clearTimeout(waiter.timer);waiter.reject(new Error('Panda closed before calendar restoration finished.'));}taskRestoreWaiters.current.clear();clearTimeout(toastTimer.current);},[]);
  const dispatch=(a:any)=>setS((old:any)=>reduce(old,a));
- const notify=(text:string,undo?:()=>void)=>{clearTimeout(toastTimer.current);setToast({text,undo});toastTimer.current=setTimeout(()=>setToast(null),5000);};
+ const notify=(text:string,undo?:()=>void)=>{clearTimeout(toastTimer.current);setToast({text,undo});toastTimer.current=setTimeout(()=>setToast(null),undo?4000:2200);};
  const sayHi=()=>{if(s.settings.mascotSounds)playPandaSound(petIndex.current%2?'tap2':'tap');clearTimeout(celebrateTimer.current);setCelebrate(true);celebrateTimer.current=setTimeout(()=>setCelebrate(false),1400);if(!open){const lines=['Hey, you. You’ve got this.','Study time? I’m right here.','Ouch! Those are my cheeks.','Stop pinching me!','Okay, that’s enough. Go focus ♡','Fine. One more boop.'];setPetLine(lines[petIndex.current++%lines.length]);clearTimeout(petTimer.current);petTimer.current=setTimeout(()=>setPetLine(''),3200);}};
  useEffect(()=>()=>{clearTimeout(petTimer.current);clearTimeout(celebrateTimer.current);},[]);
  // Inputs match :focus-visible even after pointer clicks in WebKit. Track navigation intent explicitly.
@@ -70,9 +74,9 @@ export default function App(){
   if(type==='preview')dispatch({type:'nudge'});
  };host('ready');const interval=native?null:setInterval(()=>{const n=Date.now();setNow(n);setS((x:any)=>advance(x,n));},1000);return()=>{if(interval)clearInterval(interval);delete window.pandaNative;};},[]);
  useEffect(()=>{const buttons=[['.menu-toggle','menuBounds'],['.clipper-toggle','clipperBounds']];const report=()=>{for(const [selector,type] of buttons){const button=document.querySelector(selector);if(!button)continue;const {x,y,width,height}=button.getBoundingClientRect();host(type,{x,y,width,height});}};report();const observer=new ResizeObserver(report);observer.observe(document.documentElement);for(const [selector] of buttons){const button=document.querySelector(selector);if(button)observer.observe(button);}return()=>observer.disconnect();},[]);
- useEffect(()=>{const outside=(e:PointerEvent)=>{if(openRef.current&&!layout.current?.contains(e.target as Node))close();};document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside);},[]);
+ useEffect(()=>{const outside=(e:PointerEvent)=>{if(openRef.current&&!layout.current?.contains(e.target as Node)&&!toastPosition.current?.contains(e.target as Node))close();};document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside);},[]);
  useEffect(()=>{if(!closing||open)return;const timeout=setTimeout(()=>{setClosing(false);setEdit(null);},notchMotion.close+100);return()=>clearTimeout(timeout);},[closing,open]);
- useEffect(()=>{try{if(native)host('save',{state:s});else localStorage.setItem('panda-state',JSON.stringify(s));}catch{setStorageError('Could not save. Export a backup before closing.');}},[s]);
+ useEffect(()=>{try{if(native)host('save',{state:s});else localStorage.setItem('panda-state',JSON.stringify(s));for(const [id,waiter] of taskRestoreWaiters.current){if(s.tasks.some((task:any)=>task.id===id)){clearTimeout(waiter.timer);taskRestoreWaiters.current.delete(id);waiter.resolve();}}}catch{setStorageError('Could not save. Export a backup before closing.');}},[s]);
  useEffect(()=>{document.documentElement.dataset.reduced=String(s.settings.reducedMotion);},[s.settings.reducedMotion]);
  const heardCompletion=useRef(s.timer.completedAt);
  useEffect(()=>{if(s.timer.completedAt===heardCompletion.current)return;heardCompletion.current=s.timer.completedAt;if(s.timer.completedAt&&s.settings.sound)playPandaSound('timer');},[s.timer.completedAt,s.settings.sound]);
@@ -84,8 +88,7 @@ export default function App(){
  const expanded=open||closing||!!s.alert||!!petLine;
  const panelWidth=Math.min(planning&&tab==='tasks'&&(open||closing)?(s.settings.notchSize?.width||400)+330:s.settings.notchSize?.width||400,screen.availWidth-60);
  const next=s.events.filter((e:any)=>e.end>now).sort((a:any,b:any)=>a.start-b.start)[0],seconds=remaining(s.timer,now);
- useNotchMotion(surface,visual,layout,open,closing,s.settings.reducedMotion,()=>{finishPlannerContraction();if(!openRef.current){setClosing(false);setEdit(null);}},panelWidth);
- useLayoutEffect(()=>{if(!open||!s.settings.reducedMotion||document.documentElement.dataset.inputModality==='keyboard')return;const body=layout.current?.querySelector('.open-content');const fade=body?.animate([{opacity:.55},{opacity:1}],{duration:100,easing:notchMotion.ease});return()=>fade?.cancel();},[open,s.settings.reducedMotion]);
+ useNotchMotion(surface,visual,layout,open,closing,s.settings.reducedMotion,()=>{finishPlannerContraction();if(!openRef.current){setClosing(false);setEdit(null);}},{width:panelWidth,view:tab,navigation:showNavigation,toast:!!toast&&open},toastPosition);
  // Contract the retained wide composition; switch to compact layout only after the clip rests.
  useLayoutEffect(()=>{
   if(!planningContracting||!plannerGeometry||s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -98,17 +101,42 @@ export default function App(){
   }
   return()=>animations.forEach(animation=>animation.cancel());
  },[planningContracting,plannerGeometry,s.settings.reducedMotion]);
- const previousTab=useRef(tab);
- useLayoutEffect(()=>{if(previousTab.current===tab)return;previousTab.current=tab;const node=view.current;if(!node)return;node.scrollTop=0;if(s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.inputModality==='keyboard')return;const animation=node.animate([{opacity:0,transform:'translateY(3px)'},{opacity:1,transform:'translateY(0px)'}],{duration:notchMotion.tab,easing:notchMotion.ease});return()=>animation.cancel();},[tab,s.settings.reducedMotion]);
+ const previousPage=useRef({tab,navigation:showNavigation});
+ useLayoutEffect(()=>{
+  if(previousPage.current.tab===tab&&previousPage.current.navigation===showNavigation)return;
+  previousPage.current={tab,navigation:showNavigation};view.current?.scrollTo(0,0);
+  const node=panelBody.current;if(!node)return;
+  const existing=bodyAnimation.current,style=existing?getComputedStyle(node):null;
+  const opacity=style?Number.parseFloat(style.opacity):0,transform=style?.transform;
+  const y=transform&&transform!=='none'?new DOMMatrixReadOnly(transform).m42:3;
+  existing?.cancel();bodyAnimation.current=null;
+  if(s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.inputModality==='keyboard')return;
+  // Tabs and page enter together while the same measured panel reveal runs.
+  const animation=node.animate([{opacity,transform:`translateY(${y}px)`},{opacity:1,transform:'translateY(0px)'}],{duration:notchMotion.open,easing:notchMotion.ease});
+  bodyAnimation.current=animation;animation.onfinish=()=>{if(bodyAnimation.current===animation)bodyAnimation.current=null;};
+ },[tab,showNavigation,s.settings.reducedMotion]);
+ useEffect(()=>()=>bodyAnimation.current?.cancel(),[]);
 
- const saveTask=async(t:any)=>{const title=taskTitle.trim();setEditingTask(null);if(!title||title===t.title)return;if(native&&t.calendarLink){try{await writeCalendar({taskId:t.id,title,...t.calendarLink});}catch(e:any){notify(e.message);}}else dispatch({type:'edit',id:t.id,title});};
- const remove=(t:any)=>{if(t.calendarLink){notify('Unlink this task’s scheduled time before deleting it.');return;}const index=s.tasks.findIndex((x:any)=>x.id===t.id);dispatch({type:'delete',id:t.id});notify('Task removed',()=>dispatch({type:'restoreTask',task:t,index}));};
+ const restoreTaskForUndo=(task:any,index:number)=>new Promise<void>((resolve,reject)=>{
+  const timer=setTimeout(()=>{taskRestoreWaiters.current.delete(task.id);reject(new Error('Your task is restored. Calendar time has not been restored yet.'));},5000);
+  taskRestoreWaiters.current.set(task.id,{resolve,reject,timer});dispatch({type:'restoreTask',task,index});
+ });
+ const remove=async(t:any)=>{
+  if(deletingTasks.current.has(t.id))return;
+  const task=stateRef.current.tasks.find((item:any)=>item.id===t.id);if(!task)return;
+  deletingTasks.current.add(t.id);
+  try{
+   const undo=await deleteTaskWithCalendar(task,{native,writeCalendar,dispatch,index:stateRef.current.tasks.findIndex((item:any)=>item.id===task.id),restoreTask:restoreTaskForUndo});
+   notify('Task removed',()=>{void undo().catch((error:any)=>notify(error.message));});
+  }catch(error:any){notify(error.message||'Could not remove the calendar event. Your task is still here.');}
+  finally{deletingTasks.current.delete(t.id);}
+ };
  const complete=(t:any)=>{dispatch({type:'toggle',id:t.id});if(!t.done){if(s.settings.mascotSounds)playPandaSound('select');setCelebrate(true);clearTimeout(celebrateTimer.current);celebrateTimer.current=setTimeout(()=>setCelebrate(false),1500);notify('Nicely done.',()=>dispatch({type:'toggle',id:t.id}));}};
  const add=(e:React.FormEvent)=>{e.preventDefault();if(!s.draft.trim())return;dispatch({type:'add',title:s.draft});setCelebrate(true);clearTimeout(celebrateTimer.current);celebrateTimer.current=setTimeout(()=>setCelebrate(false),900);input.current?.focus();};
  const exportData=()=>{if(native)host('export',{state:s});else{const url=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='Panda-backup.json';a.click();URL.revokeObjectURL(url);}};
  const importData=()=>{if(native)host('import');else{const el=document.createElement('input');el.type='file';el.accept='.json';el.onchange=async()=>{try{setS(restore(JSON.parse(await el.files![0].text())));notify('Backup imported');}catch(e:any){notify(e.message);}};el.click();}};
  const row=(t:any,node?:React.ReactNode,schedule?:React.ReactNode,connectionActive=false)=><motion.div initial={{opacity:0,y:-7}} animate={{opacity:1,y:0}} exit={{opacity:0,x:20}} transition={{type:'spring',stiffness:450,damping:32}} key={t.id} data-linked-task={t.id} className={`task-row ${connectionActive?'is-connection-active':''} ${t.done?'done':''} ${drag===t.id?'dragging':''}`} draggable={!t.done} onClick={e=>{if((e.target as HTMLElement).closest('button,input,textarea,select,[role=checkbox]'))return;setPlannerExpanded(true);}} onDragStart={()=>setDrag(t.id)} onDragEnd={()=>setDrag(null)} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(drag&&drag!==t.id){const ids=s.tasks.map((x:any)=>x.id).filter((id:string)=>id!==drag);ids.splice(ids.indexOf(t.id),0,drag);dispatch({type:'reorder',ids});}setDrag(null);}}>
- <Checkbox checked={t.done} onCheckedChange={()=>complete(t)} aria-label={`${t.done?'Reopen':'Complete'} ${t.title}`}/>{editingTask===t.id?<input className="task-inline-edit" aria-label="Edit to-do" autoFocus maxLength={500} value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} onBlur={()=>saveTask(t)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();saveTask(t);}if(e.key==='Escape'){e.stopPropagation();setEditingTask(null);}}}/>:<button className="task-text" onClick={()=>setPlannerExpanded(true)}><span>{t.title}</span>{t.calendarLink&&!t.calendarLink.missing&&<span className="task-scheduled-time"> ({clock(t.calendarLink.start)}–{clock(t.calendarLink.end)})</span>}</button>}<div className="row-actions">{schedule}<button aria-label={`Delete ${t.title}`} onClick={()=>remove(t)}><X size={13}/></button></div>{node}</motion.div>;
+ <Checkbox checked={t.done} onCheckedChange={()=>complete(t)} aria-label={`${t.done?'Reopen':'Complete'} ${t.title}`}/><button className="task-text" onClick={()=>setPlannerExpanded(true)}><span>{t.title}</span><TaskPriority priority={t.priority??'medium'} className="task-row-priority"/>{t.calendarLink&&!t.calendarLink.missing&&<span className="task-scheduled-time"> ({clock(t.calendarLink.start)}–{clock(t.calendarLink.end)})</span>}</button><div className="row-actions">{schedule}<button aria-label={`Delete ${t.title}`} onClick={()=>remove(t)}><X size={13}/></button></div>{node}</motion.div>;
  return <MotionConfig reducedMotion={s.settings.reducedMotion?'always':'user'}><div data-planner-contracting={planningContracting&&tab==='tasks'&&(open||closing)?'true':undefined} data-planning={planning&&tab==='tasks'&&(open||closing)?'true':undefined} data-sized={s.settings.notchSize?'true':undefined} data-view={tab} data-height-view={s.settings.notchSize?.heightView} className={`app-shell ${tab==='today'?'is-menu-home':''} ${native?'native':'preview'} ${open||closing?'is-open':''} ${closing?'is-closing':''} ${expanded?'expanded':'collapsed'} ${celebrate?'celebrating':''} ${petLine&&!open&&!s.alert?'has-pet-bubble':''}`} style={{'--safe-top':`${config.safeTop>0?config.safeTop:28}px`,'--panel-width':`${panelWidth}px`,'--planner-layout-width':`${plannerGeometry?.width||panelWidth}px`,'--planner-compact-content-height':`${plannerGeometry?.height||0}px`,'--task-column-width':`${Math.min(s.settings.notchSize?.width||400,screen.availWidth-60)-36}px`,'--user-height':`${s.settings.notchSize?.height||360}px`,'--open-height':tab==='today'&&!s.alert?(next?'230px':'240px'):'360px','--screen-height':`${config.availableHeight||800}px`,'--alert-height':s.alert?(s.alert.kind==='wellness'?'165px':s.alert.kind==='timer'?'64px':'185px'):'0px'} as React.CSSProperties}>
  <div className="notch-surface" ref={surface}><i className="notch-corner notch-corner-left" aria-hidden="true"/><i className="notch-corner notch-corner-right" aria-hidden="true"/><div className="notch-visual" ref={visual}><div className="notch-layout" ref={layout} onPointerDownCapture={e=>{if(openRef.current&&(e.target as HTMLElement).matches('input,textarea,select'))host('focus');}} onFocusCapture={e=>{if(e.target.matches('input,textarea,select'))host('focus');}}>
  {open&&<ResizeCorners layout={layout} onSave={(notchSize:any)=>dispatch({type:'settings',patch:{notchSize}})}/>}
@@ -118,19 +146,21 @@ export default function App(){
  {(open||closing)&&<div className="open-content" inert={closing&&!open}>
  <header className="panel-heading"><span className="panel-date"><strong>{new Date(now).getDate()}</strong><span> {new Date(now).toLocaleDateString('en-GB',{month:'long'})}, {new Date(now).toLocaleDateString('en-GB',{weekday:'long'})}</span></span><Button variant="ghost" size="sm" className="icon-button" aria-label={tab==='settings'?'Back to Menu':'Preferences'} onClick={()=>setTab(tab==='settings'?'today':'settings')}>{tab==='settings'?<ArrowLeft size={14}/>:<Settings size={14}/>}</Button></header>
  {storageError&&<div className="error" role="alert">{storageError}<button onClick={exportData}>Export backup</button></div>}
+ <div className="panel-body" ref={panelBody}>
  {tab!=='settings'&&showNavigation&&<SegmentedControl variant="notch" className="panda-tabs" label="Panda views" value={tab} onValueChange={navigate} options={navigationOptions}/>}
 
  <div className="view-scroll" ref={view}>
  {edit?<Editor item={edit} onClose={()=>setEdit(null)} onSave={(a:any)=>{dispatch(a);setEdit(null);}} onDelete={()=>{if(edit.kind==='task')remove(edit);else dispatch({type:'deleteEvent',id:edit.id});setEdit(null);}} onPin={()=>{dispatch({type:'pin',id:edit.id});setEdit(null);}} onMove={(delta:number)=>{dispatch({type:'move',id:edit.id,delta});notify('Task moved');}}/>:
  tab==='today'?<MenuHome onNavigate={navigate}/>:
- tab==='tasks'?<TaskPlanner s={s} info={calendarInfo} dispatch={dispatch} active={planning} layoutActive={planningLayout} onToggle={()=>setPlannerExpanded(!planningRef.current)} notify={notify} now={now} renderTasks={(nodeForTask:any,scheduleForTask:any,highlightedTask:string|null)=><div className="task-list" inert={planningContracting}><AnimatePresence initial={false}>{visibleTasks(s,now).map((t:any)=>row(t,nodeForTask(t),<button type="button" aria-label={`Edit ${t.title}`} title="Edit task name" onClick={e=>{e.stopPropagation();setEditingTask(t.id);setTaskTitle(t.title);}}><Pencil size={12}/></button>,highlightedTask===t.id))}</AnimatePresence>
+ tab==='tasks'?<TaskPlanner s={s} info={calendarInfo} dispatch={dispatch} active={planning} layoutActive={planningLayout} onToggle={()=>setPlannerExpanded(!planningRef.current)} notify={notify} now={now} renderTasks={(nodeForTask:any,scheduleForTask:any,highlightedTask:string|null)=><div className="task-list" inert={planningContracting}><AnimatePresence initial={false}>{visibleTasks(s,now).map((t:any)=>row(t,nodeForTask(t),<button type="button" aria-label={`Edit ${t.title}`} title="Edit task name" onClick={e=>{e.stopPropagation();scheduleForTask?.(t);}}><Pencil size={12}/></button>,highlightedTask===t.id))}</AnimatePresence>
  <form className="task-row add-todo-row" onSubmit={add}><span className="empty-checkbox" aria-hidden="true"/>{addingTodo||s.draft?<input ref={input} autoFocus aria-label="Add a to-do" placeholder="Add a to-do" value={s.draft} maxLength={500} onChange={e=>dispatch({type:'draft',value:e.target.value})} onBlur={()=>{if(!s.draft.trim())setAddingTodo(false);}} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setAddingTodo(false);dispatch({type:'draft',value:''});}}}/>:<button type="button" className="add-todo-placeholder" onClick={()=>setAddingTodo(true)}>Add a to-do</button>}</form></div>}/>
  :tab==='focus'?<FocusTimer s={s} seconds={seconds} dispatch={dispatch} onStart={close}/>
  :tab==='pins'?<Pins pins={s.pins} dispatch={dispatch} notify={notify}/>:tab==='reminders'?<Reminders s={s} dispatch={dispatch}/>:tab==='dump'?<BrainDump s={s} dispatch={dispatch} notify={notify}/>:<SettingsView s={s} calendarInfo={calendarInfo} config={config} dispatch={dispatch} exportData={exportData} importData={importData} preview={()=>dispatch({type:'nudge'})}/>}
  </div>
+ </div>
  </div>}
- <AnimatePresence>{toast&&open&&<motion.div className="toast" key={toast.text} role="status" initial={{opacity:0,y:6,scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:4}} transition={{duration:.18}}><span className={`toast-symbol ${toast.text.includes('removed')?'neutral':''}`} aria-hidden="true">{toast.text.includes('removed')?<Trash2 size={12}/>:<Check size={13}/>}</span><span className="toast-message">{toast.text}</span>{toast.undo&&<Button variant="secondary" size="sm" onClick={()=>{toast.undo();setToast(null);}}>Undo</Button>}</motion.div>}</AnimatePresence>
- </div></div></div></div></MotionConfig>;
+
+ </div></div><div className="toast-position" ref={toastPosition}><AnimatePresence>{toast&&open&&<motion.div className="toast" key={toast.text} role="status" initial={{opacity:0,y:6,scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:4}} transition={{duration:.18}}><span className={`toast-symbol ${toast.text.includes('removed')?'neutral':''}`} aria-hidden="true">{toast.text.includes('removed')?<Trash2 size={12}/>:<Check size={13}/>}</span><span className="toast-message">{toast.text}</span>{toast.undo&&<Button variant="secondary" size="sm" onClick={()=>{toast.undo();setToast(null);}}>Undo</Button>}</motion.div>}</AnimatePresence></div></div></div></MotionConfig>;
 }
 function Empty({title,body}:{title:string;body:string}){return <div className="empty"><Panda mood="idle" mini/><strong>{title}</strong><p>{body}</p></div>;}
 function Editor({item,onClose,onSave,onDelete,onPin,onMove}:any){const [title,setTitle]=useState(item.title),[section,setSection]=useState(item.section||'today'),[due,setDue]=useState(item.due?dateInput(item.due):''),[start,setStart]=useState(dateInput(item.start||Date.now())),[end,setEnd]=useState(dateInput(item.end||Date.now()+1800000));const task=item.kind==='task';return <form className="editor" onSubmit={e=>{e.preventDefault();if(!title.trim())return;if(task)onSave({type:'edit',id:item.id,title,section,due:due?new Date(due).getTime():null});else if(new Date(end)>new Date(start)){if(item.kind==='event')onDelete();onSave({type:'addEvent',title,start:new Date(start).getTime(),end:new Date(end).getTime()});}}}><div className="section-label"><span>{task?'TASK DETAILS':'SAMPLE EVENT'}</span><button type="button" onClick={onClose} aria-label="Close editor"><X size={16}/></button></div><Input label={task?'Your little to-do':'Event title'} autoFocus maxLength={500} value={title} onChange={e=>setTitle(e.target.value)}/>{task?<><label className="field">Keep it in<select value={section} onChange={e=>setSection(e.target.value)}><option value="today">Today</option><option value="later">Later</option></select></label><label className="field">Remind me · optional<input type="datetime-local" value={due} onChange={e=>setDue(e.target.value)}/></label><div className="edit-tools"><button type="button" onClick={onPin}><Pin size={14}/>{item.pinned?'Unpin':'Pin task'}</button><button type="button" aria-label="Move task up" onClick={()=>onMove(-1)}><ArrowUp size={14}/></button><button type="button" aria-label="Move task down" onClick={()=>onMove(1)}><ArrowDown size={14}/></button></div></>:<><label className="field">Starts<input type="datetime-local" required value={start} onChange={e=>setStart(e.target.value)}/></label><label className="field">Ends<input type="datetime-local" required min={start} value={end} onChange={e=>setEnd(e.target.value)}/></label>{new Date(end)<=new Date(start)&&<p className="error">End time must be after the start.</p>}</>}<div className="edit-footer"><Button type="submit" disabled={!title.trim()||!task&&new Date(end)<=new Date(start)}>Save changes</Button>{item.kind!=='newEvent'&&<button type="button" className="icon-button" aria-label={task?'Delete task':'Delete event'} onClick={onDelete}><Trash2 size={16}/></button>}</div></form>;}

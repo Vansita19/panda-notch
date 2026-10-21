@@ -66,10 +66,31 @@
 .planner-event>button:first-child{transition:opacity 160ms ease}
 .planner-event.linked-event>button:first-child{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .planner-event[data-phase=moving]>button:first-child{cursor:grabbing}
-.planner-event[data-phase=selecting]{border:1px dashed #83b9ff;background:#62a8ff0d}
+.planner-event[data-phase=selecting]{border:1px solid #83b9ff;background:#62a8ff45}
 .planner-event[data-phase=selecting]>button:first-child{opacity:0;pointer-events:none}
 .planner-event.is-connection-active{border-color:#62a8ff}
 .planner-event[data-phase=saving]{opacity:.8;background:color-mix(in srgb,var(--event-color) 24%,#15202b)}
 .planner-ghost{border-color:#83b9ff;background:#62a8ff0d}
 @media(prefers-reduced-motion:reduce){.planner-thread .saved-thread,.planner-event,.planner-event>button:first-child{transition:none}}
 [data-reduced=true] .planner-thread .saved-thread,[data-reduced=true] .planner-event,[data-reduced=true] .planner-event>button:first-child{transition:none}
+
+/* Editors stay attached to the clicked row/block and fit the visible notch. */
+.app-shell[data-view=tasks].is-open:has(.planner-popover) .notch-layout{height:auto;max-height:var(--screen-height)}
+.app-shell[data-view=tasks]:has(.planner-popover) .view-scroll{max-height:calc(var(--screen-height) - 125px);overflow:visible;flex:0 1 auto}
+.planner-popover{right:auto;top:auto;width:252px;max-width:calc(100vw - 32px);box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain}
+.planner-popover>header{align-items:center;margin-bottom:14px}
+.event-title-field{flex:1;min-width:0}
+.event-title-field input{box-sizing:border-box;width:100%;border:0;border-radius:4px;background:transparent;color:#f0f2f5;font:inherit;font-weight:600;padding:3px 0;outline-offset:3px}
+.event-time-fields{gap:10px;margin-bottom:14px}
+.event-time-input{display:flex;align-items:stretch;position:relative;margin-top:6px;border:1px solid #ffffff20;background:#15191e;border-radius:6px;overflow:hidden}
+.event-time-fields .event-time-input input{margin:0;flex:1;width:0;border:0;background:transparent;padding:7px 4px;font-size:10px}
+.event-time-input input::-webkit-calendar-picker-indicator{display:none}
+.event-time-steppers{display:flex;flex-direction:column;border-left:1px solid #ffffff16;flex:0 0 20px}
+.event-time-steppers>button{display:grid;place-items:center;min-height:16px;flex:1;padding:0;color:#bac4d2;background:transparent}
+.event-time-steppers>button+button{border-top:1px solid #ffffff12}
+.event-time-steppers>button:hover{background:#ffffff0b}
+.event-time-steppers>button:active{background:#ffffff16}
+.event-time-steppers>button:disabled{opacity:.4}
+.event-save-status{font-size:10px;line-height:1.4;color:#a1adbf;margin-top:8px}
+.event-save-status:empty{display:none}.event-save-status [role=alert]{color:#ffb8bd}
+.planner-popover .event-color-label{margin-top:14px}.planner-popover .event-colors{margin-bottom:14px}

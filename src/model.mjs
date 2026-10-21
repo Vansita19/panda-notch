@@ -12,6 +12,7 @@ export function normalizePinURL(value){
 export function pinLinkLabel(value){const u=new URL(value);if(u.protocol!=='file:')return u.hostname;try{return decodeURIComponent(u.pathname.split('/').filter(Boolean).pop()||'Local file');}catch{return 'Local file';}}
 
 export function validPin(p){try{return !!p&&/^[0-9a-f-]{36}$/i.test(p.id)&&typeof p.title==='string'&&!!p.title.trim()&&p.title.length<=120&&Number.isFinite(p.created)&&(p.kind==='link'?typeof p.url==='string'&&p.url.length<=4000&&normalizePinURL(p.url)===p.url:p.kind==='file'&&typeof p.fileName==='string'&&!!p.fileName&&!/[\/\\]/.test(p.fileName)&&!['.','..'].includes(p.fileName)&&Number.isFinite(p.size)&&p.size>=0);}catch{return false;}}
+export const taskPriorityValues=['low','medium','high'];
 const minute=60000;
 export const stepTimerMinutes=(value,direction)=>Math.max(1,Math.min(120,(direction>0?Math.floor(value/5)+1:Math.ceil(value/5)-1)*5));
 export const dayKey=(now=Date.now())=>{const d=new Date(now);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
@@ -22,7 +23,7 @@ export const messages=[{title:'Drink water, buddy.',sub:'A little sip. A little 
 export const durations=(s,mode)=>({focus:s.settings.focusMinutes,short:s.settings.shortMinutes,long:s.settings.longMinutes}[mode]*60);
 const timerNotice=(mode,now)=>({kind:'timer',id:uid(),at:now,title:mode==='focus'?'Ready for a fresh start?':'You did it. Take a break.',sub:mode==='focus'?'Your next focus session is ready.':'Your break is ready when you are.'});
 export function initialState(now=Date.now()){
- return {version:1,calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false};
+ return {version:1,calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false};
 }
 export function sampleEvents(now){return [{id:uid(),title:'A little planning time',start:now+20*minute,end:now+50*minute,color:'blue'},{id:uid(),title:'Make room for creative work',start:now+90*minute,end:now+150*minute,color:'peach'}];}
 export function remaining(t,now=Date.now()){return Math.max(0,Math.ceil(t.seconds-(t.running?Math.max(0,now-t.startedAt)/1000:0)));}
@@ -39,7 +40,7 @@ export function validateState(x){
  for(const t of x.tasks){const l=t.calendarLink;if(l!=null&&(!record(l)||typeof l.eventId!=='string'||l.eventId.length>1000||typeof l.calendarId!=='string'||l.calendarId.length>1000||!validSlot(l.start,l.end)||(l.color!==undefined&&!plannerColors.includes(l.color))))fail();}
  if(x.settings?.plannerStart!==undefined&&(!Number.isInteger(x.settings.plannerStart)||x.settings.plannerStart<0||x.settings.plannerStart>22))fail();
  if(x.settings?.plannerEnd!==undefined&&(!Number.isInteger(x.settings.plannerEnd)||x.settings.plannerEnd<1||x.settings.plannerEnd>24||x.settings.plannerEnd<=(x.settings.plannerStart??7)))fail();
- const ids=new Set();for(const t of x.tasks){if(typeof t.id!=='string'||ids.has(t.id)||typeof t.title!=='string'||!t.title.trim()||t.title.length>500||!['today','later'].includes(t.section)||typeof t.done!=='boolean'||typeof t.pinned!=='boolean'||!Number.isFinite(t.created)||(t.due!==null&&!Number.isFinite(t.due)))fail();ids.add(t.id);}
+ const ids=new Set();for(const t of x.tasks){if(typeof t.id!=='string'||ids.has(t.id)||typeof t.title!=='string'||!t.title.trim()||t.title.length>500||!['today','later'].includes(t.section)||typeof t.done!=='boolean'||typeof t.pinned!=='boolean'||!Number.isFinite(t.created)||(t.due!==null&&!Number.isFinite(t.due))||(t.priority!==undefined&&!taskPriorityValues.includes(t.priority)))fail();ids.add(t.id);}
  const eids=new Set();for(const e of x.events){if(typeof e.id!=='string'||eids.has(e.id)||typeof e.title!=='string'||!e.title.trim()||e.title.length>500||!Number.isFinite(e.start)||!Number.isFinite(e.end)||e.end<=e.start)fail();eids.add(e.id);}
  if(x.timer?.completedAt!=null&&(!Number.isFinite(x.timer.completedAt)||x.timer.completedAt<0))fail();
  if(x.pendingTimerMode!=null&&!['focus','short','long'].includes(x.pendingTimerMode))fail();
@@ -59,7 +60,7 @@ export function validateState(x){
  for(const value of Object.values(x.snoozed))if(!Number.isFinite(value))fail();
  return structuredClone(x);
 }
-export function restore(x){const s=validateState(x);s.pins??=[];s.brainDump??='';s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:Date.now()}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return s;}
+export function restore(x){const s=validateState(x);s.pins??=[];s.brainDump??='';s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:Date.now()}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return s;}
 export function reduce(state,a,now=Date.now()){
  if(a.type==='checkpoint'&&!state.timer.running)return state;
  const s=structuredClone(state),t=s.timer;
@@ -67,8 +68,9 @@ export function reduce(state,a,now=Date.now()){
  case 'calendarLinks':{const entries=a.links??[];s.tasks=reconcileTaskLinks(s.tasks,entries.filter(v=>v.event).map(v=>v.event)).map(t=>entries.some(v=>v.taskId===t.id&&v.missing)&&t.calendarLink?{...t,calendarLink:{...t.calendarLink,missing:true}}:t);if(JSON.stringify(s.tasks)===JSON.stringify(state.tasks))return state;break;}
  case 'taskCalendarLinked':s.tasks=s.tasks.map(v=>v.id===a.id?{...v,calendarLink:{...v.calendarLink,...a.link}}:v);break;
  case 'taskCalendarUnlinked':s.tasks=s.tasks.map(v=>{if(v.id!==a.id)return v;const {calendarLink,...task}=v;return task;});break;
+ case 'taskPriority':{if(!taskPriorityValues.includes(a.priority))return state;const task=s.tasks.find(v=>v.id===a.id);if(!task||task.priority===a.priority)return state;task.priority=a.priority;break;}
  case 'taskCalendarColor':if(plannerColors.includes(a.color))s.tasks=s.tasks.map(v=>v.id===a.id&&v.calendarLink?{...v,calendarLink:{...v.calendarLink,color:a.color}}:v);break;
- case 'add':{const title=a.title.trim().slice(0,500);if(!title)return state;s.tasks.push({id:uid(),title,section:a.section==='later'?'later':'today',done:false,pinned:false,created:now,due:null});s.draft='';break;}
+ case 'add':{const title=a.title.trim().slice(0,500);if(!title)return state;s.tasks.push({id:uid(),title,section:a.section==='later'?'later':'today',done:false,pinned:false,created:now,due:null,priority:'medium'});s.draft='';break;}
  case 'addPins':for(const p of a.pins??[])if(validPin(p)&&s.pins.length<200&&!s.pins.some(v=>v.id===p.id))s.pins.push(p);break;
  case 'deletePin':s.pins=s.pins.filter(p=>p.id!==a.id);break;
  case 'saveNote':{const body=s.brainDump.trim();if(!body||s.notes.length>=5000)return state;s.notes.unshift({id:uid(),body,created:now});s.brainDump='';break;}

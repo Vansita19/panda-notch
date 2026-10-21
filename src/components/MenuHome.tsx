@@ -1,5 +1,6 @@
 import {useLayoutEffect,useRef,type KeyboardEvent} from 'react';
 import {featureViews} from '../navigation';
+import {createMenuCardMotion} from './menu-card-motion';
 import './menu-home.css';
 
 type MenuHomeProps={onNavigate:(id:string)=>void};
@@ -11,7 +12,7 @@ const updateScrollEdges=(node:HTMLDivElement)=>{
  if(node.hasAttribute('data-fade-end')!==end)node.toggleAttribute('data-fade-end',end);
 };
 
-/** Figma's 160px artwork remains at its intrinsic size, scaled together to an 80px card. */
+/** Figma artwork scales as a unit: 200px at Retina resolution, 100 native points. */
 function CardArtwork({id,label}:{id:string;label:string}){
  return <span className={`menu-card-art menu-card-art-${id}`} aria-hidden="true">
   {id==='tasks'&&<>
@@ -23,6 +24,7 @@ function CardArtwork({id,label}:{id:string;label:string}){
   </>}
   {id==='focus'&&<>
    {asset('imgEllipse4','menu-layer menu-focus-glow')}
+   <span className="menu-layer menu-focus-core"/>
    <span className="menu-card-label">{label}</span>
    <span className="menu-icon-clip">{asset('imgGroup1','menu-layer menu-focus-icon')}</span>
   </>}
@@ -30,6 +32,7 @@ function CardArtwork({id,label}:{id:string;label:string}){
    {asset('imgVector4','menu-layer menu-links-glow')}
    {asset('imgBiPinAngle','menu-layer menu-card-icon')}
    {asset('imgMaskGroup','menu-layer menu-links-mask')}
+   <span className="menu-layer menu-links-wave" style={{maskImage:'url("menu/imgMaskGroup.svg")',WebkitMaskImage:'url("menu/imgMaskGroup.svg")'}}>{Array.from({length:25},(_,i)=><span className="menu-wave-bar" key={i} style={{left:`${i*6.51078}px`}}/>)}</span>
    <span className="menu-card-label">{label}</span>
   </>}
   {id==='dump'&&<>
@@ -49,6 +52,8 @@ function CardArtwork({id,label}:{id:string;label:string}){
 
 export function MenuHome({onNavigate}:MenuHomeProps){
  const viewport=useRef<HTMLDivElement>(null);
+ const ambient=useRef<ReturnType<typeof createMenuCardMotion>|null>(null);
+ useLayoutEffect(()=>{ambient.current=createMenuCardMotion();return()=>{ambient.current?.dispose();ambient.current=null;};},[]);
  useLayoutEffect(()=>{
   const node=viewport.current;if(!node)return;
   const updateEdges=()=>updateScrollEdges(node);
@@ -82,7 +87,7 @@ export function MenuHome({onNavigate}:MenuHomeProps){
  };
  return <nav className="menu-home" aria-label="Panda tools">
   <div className="menu-home-scroll" ref={viewport} onKeyDown={navigateCards} onFocusCapture={event=>{if(event.target instanceof HTMLButtonElement)reveal(event.target);}}>
-   {featureViews.map(card=><button className="menu-card" type="button" key={card.id} aria-label={card.title} onClick={()=>onNavigate(card.id)}><CardArtwork id={card.id} label={card.title}/></button>)}
+   {featureViews.map(card=><button className="menu-card" type="button" key={card.id} aria-label={card.title} onPointerEnter={e=>{if(e.pointerType==='mouse')ambient.current?.enter(e.currentTarget);}} onPointerMove={e=>{if(e.pointerType==='mouse')ambient.current?.enter(e.currentTarget);}} onPointerLeave={e=>ambient.current?.leave(e.currentTarget)} onClick={()=>onNavigate(card.id)}><CardArtwork id={card.id} label={card.title}/></button>)}
   </div>
  </nav>;
 }

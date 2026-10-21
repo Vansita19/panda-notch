@@ -89,3 +89,29 @@ test('equal-height width changes still animate and reduced motion settles both d
  assert.equal(f.visual.animations.length,1);assert.ok(f.visual.animations[0].cancelled);
  assert.match(f.visual.style.clipPath,/inset\(0px 170px 0px 170px/);assert.equal(layout.style.width,'400px');
 });
+
+test('layout refinements during one planner expansion retain its original completion deadline',()=>{
+ const f=fixture();let stamp=0;
+ const m=createNotchMotion(f.surface,f.visual,()=>{},()=>{},()=>({clipPath:f.visual.style.clipPath}),undefined,()=>stamp);
+ m.to(240,{open:true,duration:0,width:400,transitionKey:'tasks:compact'});
+ m.to(600,{open:true,duration:280,width:730,transitionKey:'tasks:expanded'});
+ assert.equal(f.visual.animations.at(-1).options.duration,280);
+ stamp=90;f.visual.style.clipPath='inset(0px 45px 100px 45px round 0px 0px 14px 14px)';
+ m.to(620,{open:true,duration:280,width:730,transitionKey:'tasks:expanded'});
+ assert.equal(f.visual.animations.at(-1).options.duration,190);
+ stamp=160;f.visual.style.clipPath='inset(0px 20px 45px 20px round 0px 0px 14px 14px)';
+ m.to(630,{open:true,duration:280,width:730,transitionKey:'tasks:expanded'});
+ assert.equal(f.visual.animations.at(-1).options.duration,120);
+});
+
+test('an explicit new view starts its own transition while observer retargets do not',()=>{
+ const f=fixture();let stamp=0;
+ const m=createNotchMotion(f.surface,f.visual,()=>{},()=>{},()=>({clipPath:f.visual.style.clipPath}),undefined,()=>stamp);
+ m.to(173,{open:true,duration:0,width:400,transitionKey:'menu'});
+ m.to(345,{open:true,duration:280,width:400,transitionKey:'tasks'});
+ stamp=100;f.visual.style.clipPath='inset(0px 0px 50px 0px round 0px 0px 14px 14px)';
+ m.to(410,{open:true,duration:280,width:400,transitionKey:'focus'});
+ assert.equal(f.visual.animations.at(-1).options.duration,280);
+ stamp=150;m.to(420,{open:true,duration:280,width:400,transitionKey:'focus'});
+ assert.equal(f.visual.animations.at(-1).options.duration,230);
+});
