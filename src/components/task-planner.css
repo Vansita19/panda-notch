@@ -1,0 +1,49 @@
+/* The original checklist remains mounted at its compact width in both modes. */
+.task-workspace{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0;color:#e6e8ec;font-size:12px;isolation:isolate}
+.task-checklist{width:min(var(--task-column-width,364px),100%);min-width:0;align-self:start;position:relative;z-index:2}
+.task-workspace[data-active=true]{grid-template-columns:minmax(0,var(--task-column-width,364px)) minmax(220px,1fr);column-gap:36px}
+.app-shell[data-planning=true] .view-scroll{overflow-y:auto;overflow-x:clip;min-height:0}
+.task-workspace .task-row{position:relative;overflow:visible;border-radius:8px;background:transparent;transition:background-color 120ms ease}
+.task-workspace .task-row:not(.add-todo-row):hover,.task-workspace .task-row:not(.add-todo-row):focus-within{background:#171a20;box-shadow:inset 0 0 0 1px #ffffff0a}
+.todo-heading-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px}
+.todo-heading-row .todo-heading{margin:0}.todo-heading-row>button{font-size:10px!important}
+.thread-node{position:absolute;right:-11px;top:50%;transform:translateY(-50%);width:22px;height:28px;display:grid;place-items:center;padding:0;touch-action:none;cursor:crosshair;border:0;background:transparent;border-radius:5px;z-index:3;opacity:0;transition:opacity 120ms ease}
+.task-row:hover .thread-node,.task-row:focus-within .thread-node,.thread-node[aria-pressed=true]{opacity:1}
+.thread-node[hidden]{display:none}.thread-node span{display:block;width:4px;height:4px;border-radius:50%;background:#c0c8d3}
+.thread-node:hover span,.thread-node[aria-pressed=true] span{background:#e6e9ed}
+.thread-node:disabled{opacity:.3;cursor:not-allowed}
+.planner-day{min-width:0;align-self:start;padding:0 0 10px;background:none;border:0;border-radius:0;position:relative}
+.task-workspace[data-active=false]>.planner-day{position:absolute;left:calc(var(--task-column-width,364px) + 36px);width:294px;top:0;visibility:hidden;opacity:0;pointer-events:none}
+.planner-hours{display:flex;align-items:center;justify-content:flex-end;gap:7px;color:#858b94;margin:0 0 23px;min-height:24px;font-size:10px}
+.planner-hours select,.planner-calendar-choice select{min-width:0;border:0;background:#171a1e;padding:4px 15px 4px 6px;border-radius:5px;font-size:10px;color:#aeb7c4}
+.planner-grid{height:440px;position:relative;isolation:isolate;margin-right:2px;touch-action:none;outline-offset:5px}
+.planner-grid.accepting-thread{cursor:none}.planner-grid.accepting-thread *{cursor:none!important}
+.planner-hour{position:absolute;left:0;right:0;display:flex;align-items:center;gap:7px;transform:translateY(-50%);pointer-events:none}
+.planner-hour>span{width:22px;text-align:right;font-size:9px;font-weight:500;color:#7e8792;font-variant-numeric:tabular-nums}
+.planner-hour i{height:1px;background:#ffffff14;flex:1}
+.planner-event{position:absolute;min-height:13px;border-radius:4px;border-left:3px solid var(--event-color);background:color-mix(in srgb,var(--event-color) 19%,#15202b);color:var(--event-color);z-index:2;overflow:hidden}
+.planner-event>button:first-child{display:flex;flex-direction:column;align-items:flex-start;padding:3px 5px;width:100%;height:100%;color:inherit;text-align:left;min-width:0}
+.planner-event strong{font-size:10px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:100%;font-weight:550}
+.planner-event span{font-size:8px;line-height:1.5;white-space:nowrap}.completed-event{opacity:.5}
+.planner-resize{position:absolute;bottom:0;left:0;right:0;height:7px;cursor:ns-resize;touch-action:none;opacity:0;background:#ffffff30}
+.planner-event:hover .planner-resize,.planner-resize:focus-visible{opacity:1}
+.planner-now{position:absolute;left:27px;right:0;height:1px;background:#ff5967;pointer-events:none;z-index:3}
+.planner-now i{position:absolute;left:-3px;top:-2px;width:5px;height:5px;border-radius:50%;background:#ff5967}
+.planner-thread{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:10}
+.planner-thread path{fill:none;stroke:#b3bdca;stroke-width:2;stroke-linecap:round}
+.planner-thread g circle{fill:#14171b;stroke:#b3bdca;stroke-width:1}.planner-thread g path{stroke:#f0f2f5}
+.planner-ghost{position:absolute;left:28px;right:0;z-index:5;pointer-events:none;min-height:1px;border:1px dashed #a7b2c4;background:#a7b2c40c;border-radius:4px}
+.planner-ghost[data-selecting=true]{background:#a7b2c423;border-color:#d0d8e5}
+.planner-calendar-choice{display:flex;gap:7px;align-items:center;margin-top:20px;font-size:10px;color:#8c97a7}
+.planner-calendar-choice select{flex:1;max-width:100%}
+.planner-hint{font-size:10px;color:#858e9b;margin:10px 0 0;line-height:1.5;max-width:220px;min-height:30px}
+.planner-connect{font-size:11px;line-height:1.6;color:#aab4c2;margin-top:14px}
+.planner-all-day{display:flex;flex-direction:column;gap:4px;font-size:9px;color:#b9c8df;margin:0 0 16px 28px}.planner-all-day span{background:#6383ad22;padding:5px;border-radius:4px}
+.planner-popover{position:absolute;right:12px;top:70px;z-index:15;width:240px;padding:16px;background:#252930;border:1px solid #ffffff25;border-radius:14px;box-shadow:0 12px 40px #0009;font-size:11px}
+.planner-popover>header{display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}.planner-popover>header strong{flex:1;line-height:1.5;overflow-wrap:anywhere}.planner-popover button{color:inherit}
+.event-time-fields{display:flex;gap:10px;margin-bottom:12px}.event-time-fields label{flex:1;min-width:0;color:#a4afbf;font-size:10px}.event-time-fields input{display:block;width:100%;min-width:0;margin-top:6px;border:1px solid #ffffff20;background:#15191e;color:#e0e4ed;padding:7px 5px;font:inherit;border-radius:6px;color-scheme:dark}
+.event-colors{display:flex;gap:10px;margin:8px 0 18px}.event-colors button{width:22px;height:22px;border-radius:50%;border:2px solid transparent}.event-colors button[aria-pressed=true]{outline:1px solid white;outline-offset:3px}.event-color-label{font-size:10px;color:#a5acb8;margin-top:18px}
+.planner-error{display:flex;gap:10px;color:#ffb8bd;background:#412329;padding:9px;border-radius:8px;font-size:11px;margin-bottom:12px}.planner-error button{margin-left:auto}
+.planner-connect{font-size:11px;line-height:1.6;color:#aab4c2}.planner-all-day{display:flex;flex-direction:column;gap:4px;font-size:9px;color:#b9c8df;margin:0 0 14px 28px}.planner-all-day span{background:#6383ad22;padding:5px;border-radius:4px}
+
+@media(prefers-reduced-motion:reduce){.task-checklist,.planner-day{animation:none;transition:none}}

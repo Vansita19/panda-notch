@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {initialState,restore,reduce,normalizePinURL,validPin} from '../src/model.mjs';
+const link={id:crypto.randomUUID(),kind:'link',title:'Portfolio',url:'https://example.com/',created:1};
+test('old saves migrate without losing tasks',()=>{const s=initialState();delete s.pins;assert.deepEqual(restore(s).pins,[]);assert.deepEqual(restore(s).tasks,s.tasks);});
+test('link normalization rejects unsafe protocols and credentials',()=>{assert.equal(normalizePinURL('example.com'),'https://example.com/');for(const v of ['javascript:alert(1)','https://user:secret@example.com','a b'])assert.throws(()=>normalizePinURL(v));});
+test('pins persist, deduplicate, remove and undo',()=>{let s=reduce(initialState(),{type:'addPins',pins:[link,link]});assert.equal(s.pins.length,1);assert.deepEqual(restore(s).pins,[link]);s=reduce(s,{type:'deletePin',id:link.id});assert.equal(s.pins.length,0);s=reduce(s,{type:'addPins',pins:[link]});assert.equal(s.pins.length,1);});
+test('file metadata cannot contain traversal or arbitrary IDs',()=>{const f={id:crypto.randomUUID(),kind:'file',title:'CV',fileName:'CV.pdf',size:20,created:1};assert.ok(validPin(f));for(const fileName of ['../a','a/b','a\\b','..'])assert.equal(validPin({...f,fileName}),false);assert.equal(validPin({...f,id:'../../private'}),false);});
+test('malformed imported pins fail instead of discarding user data',()=>{const s=initialState();s.pins=[{...link,url:'javascript:alert(1)'}];assert.throws(()=>restore(s));});
+test('editing a note preserves its identity and other notes; blank edits do not erase it',()=>{let s=initialState();s.notes=[{id:'note1',body:'Original',created:1},{id:'note2',body:'Keep',created:2}];s=reduce(s,{type:'editNote',id:'note1',body:'Updated'},3);assert.deepEqual(s.notes[0],{id:'note1',body:'Updated',created:1,updated:3});assert.equal(s.notes[1].body,'Keep');assert.equal(reduce(s,{type:'editNote',id:'note1',body:'   '}),s);assert.equal(restore(s).notes[0].body,'Updated');});
+
+test('local file links retain their section anchor and survive save/restore',()=>{const url='file:///Users/example/design-system.html#button/overview';assert.equal(normalizePinURL(url),url);const s=reduce(initialState(),{type:'addPins',pins:[{...link,url}]});assert.equal(restore(s).pins[0].url,url);assert.equal(normalizePinURL('/Users/example/My Files/design.html'),'file:///Users/example/My%20Files/design.html');assert.throws(()=>normalizePinURL('file://remote-server/share/file.html'));});

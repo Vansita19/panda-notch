@@ -10,3 +10,13 @@ dist/
 *.dmg
 backups/
 output/
+
+# Local previews, packaged experiments, and private application data
+work/
+state.json
+state-*.json
+Panda/
+*.backup
+*.sqlite
+*.sqlite-*
+Web-stage-*/

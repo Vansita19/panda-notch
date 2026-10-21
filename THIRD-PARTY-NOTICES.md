@@ -38,3 +38,7 @@ Runtime/build dependencies and their supplied notices:
 
 ### Notch motion adaptation
 The notch reveal uses the panel-reveal easing from https://transitions.dev/library.html, adapted to a clipped, top-anchored surface so the Mac window resizes only at endpoints. Arc segmented controls retain their styling with a shorter sliding-selection transition. Implementation guidance: Emil Kowalski’s official animate skill and recipes, https://github.com/emilkowalski/skills/tree/main/skills/animate (interruptible transitions, short durations, keyboard/reduced-motion support). No additional runtime dependency.
+
+## Cuelume 0.2.4
+https://github.com/danielwh2/cuelume — MIT, Daniel Belyi.
+Attention (reminder.wav and timer.wav) and Select (select.wav) are rendered from Cuelume's original default-theme synthesis engine at normal emphasis. The build-only OfflineAudioContext harness is in scripts/prepare-sound-renderer.mjs. Audio plays locally through NSSound on macOS; no audio service or runtime network connection is used. License: licenses/Cuelume-MIT.txt.

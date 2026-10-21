@@ -199,3 +199,160 @@ html[data-input-modality=keyboard] .app-shell button:focus-visible{outline:none!
 .task-row{border-bottom:0;min-height:36px;padding:1px 0}
 .task-text{padding-top:6px;padding-bottom:6px}
 .add-todo-placeholder,.add-todo-row input{padding-top:6px;padding-bottom:6px}
+
+/* The top rail stays at its original size; expansion gains fifty pixels of workspace. */
+.app-shell .notch-surface{width:400px;transition:none}
+
+.notch-rail{cursor:pointer}
+.closed-task-progress{flex-direction:row-reverse;align-items:center;gap:5px;width:auto;white-space:nowrap}
+.mini-progress-ring{width:14px;height:14px;flex-shrink:0;fill:none;stroke:#ffffff25;stroke-width:2.4}
+.mini-progress-ring .ring-fill{stroke:#b7d6c5;stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 160ms ease-out}
+.today-overview{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
+.today-overview:has(+.upcoming-event){justify-content:flex-end;margin:0 0 10px}
+.today-overview .simple-greeting{flex:1;min-width:0;gap:11px}
+.today-overview .simple-greeting .panda{width:56px;min-width:56px;height:70px}
+.today-overview .simple-greeting h1{font-size:17px;white-space:nowrap}
+.today-overview .simple-greeting p{font-size:10px}
+.today-calendar{flex-shrink:0;font-size:9px!important;padding:0 8px!important;min-height:28px!important;gap:3px!important}
+.reminder-form-bottom{display:flex;align-items:center;justify-content:space-between}
+.reminder-actions{gap:3px}
+.led-banner{position:relative;flex:0 0 auto;min-height:106px;padding:7px 17px 29px;overflow:hidden}
+.led-procession{display:flex;align-items:center;gap:0;width:100%;animation:led-delivery 3s cubic-bezier(.22,1,.36,1) both}
+.led-procession>.panda{width:66px;height:78px;flex-shrink:0;z-index:1}
+.led-board{position:relative;flex:1;min-width:0;padding:12px;margin-left:-6px;border-radius:9px;background:#101917;border:1px solid #33443f;box-shadow:inset 0 1px 0 #c6ffe911,0 3px 0 #060c0a}
+.led-message{display:block;width:100%;max-height:94px;filter:drop-shadow(0 0 2px #6ce3c042)}
+.led-paw{position:absolute;left:-5px;top:50%;width:10px;height:15px;border-radius:8px;transform:translateY(-50%);background:#343a3e}
+.led-fallback{display:block;color:#a3f7df;font:14px/1.5 monospace;overflow-wrap:anywhere}
+.led-thanks{position:absolute;right:18px;bottom:5px;font-size:10px!important;min-height:22px!important;color:#98aaa3!important}
+@keyframes led-delivery{0%{transform:translateX(-115%);opacity:0}18%{transform:translateX(-3px);opacity:1}76%{transform:translateX(3px);opacity:1}100%{transform:translateX(120%);opacity:0}}
+[data-reduced=true] .led-procession{animation:none;transform:none}
+[data-reduced=true] .app-shell .notch-surface,[data-input-modality=keyboard] .app-shell .notch-surface{transition:none}
+@media(prefers-reduced-motion:reduce){.led-procession{animation:none}.app-shell .notch-surface{transition:none}}
+.camera-space{height:100%}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* Fixed canvas. The controller owns all geometry, with one animation clock. */
+.app-shell .notch-surface{width:400px;max-width:none;transition:none}
+.notch-surface:before,.notch-surface:after{display:none}
+.notch-corner{position:absolute;top:0;width:14px;height:14px;pointer-events:none}
+.notch-corner-left{left:-14px;background:radial-gradient(circle at 0 100%,transparent 13.5px,var(--notch-background) 14px)}
+.notch-corner-right{right:-14px;background:radial-gradient(circle at 100% 100%,transparent 13.5px,var(--notch-background) 14px)}
+.rail-menu{justify-self:end;width:24px;height:24px;display:flex;align-items:center}
+.notch-corner,.rail-leading,.rail-menu{transition:none}
+
+
+.reminder-duration-setting{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin:12px 0 16px;font-size:11px;color:#aab2bd}
+.reminder-duration-setting>div{display:flex;align-items:center;gap:7px}
+.reminder-duration-setting input{width:58px;padding:7px 8px;border:1px solid #ffffff16;border-radius:8px;background:#24272b;color:#e9eae7;font:inherit}
+.reminder-duration-setting p{grid-column:1/-1;margin:0;font-size:9px;color:#858e9a}
+
+.led-procession{animation:led-arrive 450ms cubic-bezier(.22,1,.36,1) both,led-leave 450ms cubic-bezier(.55,0,1,.45) calc(var(--banner-duration,5000ms) - 450ms) forwards}
+@keyframes led-arrive{from{transform:translateX(-115%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes led-leave{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+[data-reduced=true] .led-procession{animation:none}
+@media(prefers-reduced-motion:reduce){.led-procession{animation:none}}
+/* The reveal canvas must retain its measured height after a taller tab.
+   Only .notch-layout limits content height; shrinking this canvas clips twice. */
+.notch-visual{flex:0 0 auto}
+.app-shell.native.is-open .notch-surface{max-height:none}
+
+/* Pins reuse the same compact rows and Arc controls as the other views. */
+.main-tabs button{padding-left:5px!important;padding-right:5px!important}
+.pins-view{display:flex;flex-direction:column;min-height:180px;gap:14px}
+.pins-list{display:flex;flex-direction:column;gap:4px}
+.pin-row{display:flex;align-items:center;gap:9px;min-height:48px}
+.pin-kind{color:#9da6b0;display:flex;flex:none}
+.pin-label{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pin-label strong{font-size:12px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pin-label span{font-size:10px;color:#939da8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pin-row button{flex:none;padding:6px!important;min-width:26px}
+.pin-drag{background:none;border:0;color:#939da8;cursor:grab;touch-action:none}
+.pin-drag:active{cursor:grabbing}
+.pins-empty{display:flex;align-items:center;flex-direction:column;gap:10px;padding:24px 0;color:#939da8;font-size:11px}
+.pins-empty strong{color:#e5e7eb;font-size:13px;font-weight:550}
+.pins-footer{display:flex;justify-content:space-between;margin-top:auto;padding-top:8px}
+.pin-form{display:flex;flex-direction:column;gap:10px;padding:8px 2px}
+.pin-form>div:last-child{display:flex;justify-content:flex-end;gap:6px}
+.pin-form>span{font-size:11px;color:#e5a6a6}
+/* Fill the tab viewport so actions stay aligned with the other page footers. */
+.pins-view{height:100%;min-height:0}
+.pins-list{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
+.pins-footer{flex-shrink:0;margin-top:auto}
+
+/* Brain dump grows naturally: composer first, saved notes immediately below. */
+.app-shell[data-view=dump].is-open .notch-layout{height:auto;max-height:var(--screen-height)}
+.app-shell[data-view=dump] .view-scroll{flex:0 1 auto;min-height:0;overflow-y:auto}
+.notes-view{height:auto;min-height:0;gap:14px}
+.note-composer{display:flex;flex-direction:column;gap:8px;flex:none;padding:12px;border:1px solid #ffffff13;border-radius:12px;background:#ffffff03}
+.note-composer textarea{order:0;flex:none;box-sizing:border-box;resize:none;overflow:hidden;min-height:72px;max-height:none;width:100%;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;line-height:1.65}
+.note-save-row{order:1;flex:none;margin-top:0;gap:8px;align-items:center}
+.note-save-row>span{font-size:9px}
+.note-save-row button{margin-left:auto;flex-shrink:0}
+.saved-notes{order:initial;flex:none;max-height:none;overflow:visible;padding-top:0;border-top:0}
+.saved-note{width:100%;text-align:left}
+.saved-note>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-body{flex:none;overflow:visible;overflow-wrap:anywhere;white-space:pre-wrap;margin:0}
+.note-composer:focus-within{border-color:#ffffff24}
+html[data-input-modality=keyboard] .note-composer:focus-within{border-color:#6495ed;box-shadow:0 0 0 2px #6495ed40}
+
+/* Pins uses its content height, growing until the display limit. */
+.app-shell[data-view=pins].is-open .notch-layout{height:auto;max-height:var(--screen-height)}
+.app-shell[data-view=pins] .view-scroll{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.pins-view{height:auto;min-height:0;flex:0 1 auto}
+.pins-list{flex:0 1 auto;min-height:0;overflow-y:auto}
+.pin-row{flex-shrink:0}
+.pin-label{cursor:grab;user-select:none;-webkit-user-select:none}
+.pin-label:active{cursor:grabbing}
+/* Keep note editor actions together; only the action group aligns right. */
+.note-save-row:has(>button:first-child){justify-content:flex-end}
+.note-save-row:has(>button:first-child)>button{margin-left:0}
+/* User resizing uses real layout, never a scale transform on text. */
+.app-shell .notch-surface{width:var(--panel-width,400px)}
+.app-shell[data-sized=true].is-open .notch-layout{height:min(var(--user-height),var(--screen-height));max-height:var(--screen-height)}
+.app-shell[data-sized=true] .view-scroll{flex:1;min-height:0;overflow-y:auto}
+.resize-corner{position:absolute;bottom:1px;width:22px;height:22px;padding:0;border:0;background:transparent;z-index:20;touch-action:none;opacity:.25;transition:opacity .15s}
+.resize-corner:hover,.resize-corner:focus-visible{opacity:.9}
+.resize-left{left:1px;cursor:nesw-resize}
+.resize-right{right:1px;cursor:nwse-resize}
+.resize-corner span{position:absolute;bottom:6px;right:6px;width:6px;height:6px;border-right:1px solid #abb2bc;border-bottom:1px solid #abb2bc;border-radius:0 0 2px 0}
+.resize-left span{transform:rotate(90deg)}
+[data-resizing] *{user-select:none!important;-webkit-user-select:none!important;cursor:inherit}
+[data-resizing] .notch-visual{will-change:auto}
+.task-text{min-width:0}.task-text span{overflow-wrap:anywhere}
+/* The reserved animation canvas must not cast a shadow below the visible panel. */
+.app-shell .notch-surface{box-shadow:none}
+
+/* Prevent WebKit viewport scrolling from separating painted controls and hit targets. */
+html,body,#root{height:100%;width:100%;overflow:hidden}
+body{position:fixed;inset:0}
+.notch-rail{position:relative;z-index:21;flex-shrink:0}
+
+/* Today always fits its content, including when another view was resized. */
+.app-shell[data-view=today].is-open .notch-layout{height:auto;max-height:var(--screen-height)}
+.app-shell[data-view=today] .view-scroll{flex:0 1 auto;min-height:0;overflow-y:auto}
+
+/* Direct screen capture stays beside the menu in both notch states. */
+.rail-menu{width:auto;gap:10px;flex-shrink:0}
+.clipper-toggle{display:grid;place-items:center;width:24px;height:24px;flex:none;padding:0;border:0;border-radius:6px;background:transparent;color:#b3bac4;cursor:pointer}
+.clipper-toggle:hover{color:#f1f3f5;background:#ffffff0b}
+
+/* Let measured content drive the native window, not the previous viewport width. */
+.app-shell.native .notch-surface{max-width:none;transition:none}
+.app-shell[data-view=today][data-height-view=today][data-sized=true].is-open .notch-layout,
+.app-shell[data-resizing].is-open .notch-layout{height:min(var(--user-height),var(--screen-height));max-height:var(--screen-height)}
+.app-shell[data-view=today][data-height-view=today][data-sized=true] .view-scroll{flex:1;min-height:0}
+.resize-corner{width:28px;height:28px;opacity:.5}
+
+.notch-size-settings{margin:16px 0}
+.size-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.size-fields label{display:flex;flex-direction:column;gap:6px;font-size:11px;color:#aab2bd}
+.size-fields input{min-width:0;width:100%;padding:8px;border:1px solid #ffffff20;border-radius:8px;background:#24272b;color:#e9eae7;font:inherit}
+.size-actions{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
+
+.music-buddy{display:flex;align-items:center;gap:9px;flex-shrink:0;padding:0;height:25px;color:#94b6e5}
+.music-buddy img,.music-cover-fallback{width:23px;height:23px;border-radius:50%;object-fit:cover;background:#263a54;display:grid;place-items:center;font-size:15px}
+.music-bars{display:flex;gap:2px;align-items:center;height:15px;width:20px}
+.music-bars i{display:block;width:2px;height:13px;border-radius:2px;background:currentColor;transform:scaleY(.25)}
+.music-bars[data-playing=true] i{animation:panda-music-bars .85s ease-in-out infinite alternate;animation-delay:var(--bar-delay)}
+@keyframes panda-music-bars{0%{transform:scaleY(.25)}40%{transform:scaleY(.8)}100%{transform:scaleY(.45)}}
+[data-reduced=true] .music-bars i{animation:none!important}
+@media(prefers-reduced-motion:reduce){.music-bars i{animation:none!important}}

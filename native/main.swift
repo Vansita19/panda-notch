@@ -14,14 +14,22 @@ final class ClearWebView: WKWebView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavigationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavigationDelegate, NSWindowDelegate, NSDraggingSource {
     var panel: PandaPanel!
     var web: ClearWebView!
     var statusItem: NSStatusItem!
     var ticker: Foundation.Timer?
     var hotKey: EventHotKeyRef?
     var eventHandler: EventHandlerRef?
+    let textCapture=TextCapture()
+    lazy var music:NowPlaying = {let reader=NowPlaying();reader.publish = { [weak self] type,payload in self?.send(type,payload) };return reader}()
+    var menuBounds: CGRect = .zero
+    var clipperBounds: CGRect = .zero
+    var outsideLocalMonitor: Any?
     var clickMonitor: Any?
+    var pinDragMonitor: Any?
+    var pinMouseDown: NSEvent?
+    var pendingPinURL: URL?
     var expanded = false
     var ready = false
     var sleeping = false
@@ -36,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let reader = CalendarReader()
         reader.selectedIDs = { [weak self] in (self?.currentState?["calendar"] as? [String:Any])?["selectedIds"] as? [String] ?? [] }
         reader.isConnected = { [weak self] in (self?.currentState?["calendar"] as? [String:Any])?["mode"] as? String == "connected" }
+        reader.tasks = { [weak self] in self?.currentState?["tasks"] as? [[String:Any]] ?? [] }
         reader.publish = { [weak self] type, payload in self?.send(type,payload) }
         return reader
     }()
@@ -46,7 +55,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }()
     lazy var stateURL = folder.appendingPathComponent("state.json")
     var selectedScreen: NSScreen { NSScreen.screens.first(where:{$0.safeAreaInsets.top > 0}) ?? NSScreen.main ?? NSScreen.screens[0] }
-    var webRoot: URL { Bundle.main.resourceURL!.appendingPathComponent("Web",isDirectory:true) }
+    // Keep signed host resources immutable across ordinary UI updates, preserving TCC identity.
+    lazy var webRoot: URL = {
+        let bundled = Bundle.main.resourceURL!.appendingPathComponent("Web",isDirectory:true)
+        let installed = folder.appendingPathComponent("Web",isDirectory:true)
+        if !fm.fileExists(atPath:installed.appendingPathComponent("index.html").path) {
+            try? fm.copyItem(at:bundled,to:installed)
+        }
+        return fm.fileExists(atPath:installed.appendingPathComponent("index.html").path) ? installed : bundled
+    }()
     func configuration() -> [String:Any] {
         let screen=selectedScreen
         let width:CGFloat
@@ -87,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             editMenu.addItem(item)
         }
         main.addItem(editItem);NSApp.mainMenu=main;registerShortcut()
-        ticker=Foundation.Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in guard let self,self.ready,!self.sleeping else{return};self.send("tick",Date().timeIntervalSince1970*1000);self.tickCount += 1;if self.tickCount % 15 == 0 {self.send("checkpoint")};if self.tickCount % 60 == 0 && self.calendarReader.isConnected() {self.calendarReader.refresh()}}
+        ticker=Foundation.Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in guard let self,self.ready,!self.sleeping else{return};self.send("tick",Date().timeIntervalSince1970*1000);self.tickCount += 1;if self.tickCount % 15 == 0 {self.send("checkpoint")};if self.tickCount % 5 == 0 {self.music.refresh()};if self.tickCount % 60 == 0 && self.calendarReader.isConnected() {self.calendarReader.refresh()}}
         ticker?.tolerance=0.1
         NotificationCenter.default.addObserver(self,selector:#selector(screenChanged),name:NSApplication.didChangeScreenParametersNotification,object:nil)
         let center=NSWorkspace.shared.notificationCenter
@@ -95,8 +112,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         center.addObserver(self,selector:#selector(didWake),name:NSWorkspace.didWakeNotification,object:nil)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(willSleep),name:NSNotification.Name("com.apple.screenIsLocked"),object:nil)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(didWake),name:NSNotification.Name("com.apple.screenIsUnlocked"),object:nil)
-        clickMonitor=NSEvent.addGlobalMonitorForEvents(matching:[.leftMouseDown,.rightMouseDown]){[weak self] _ in guard let self,self.expanded,!self.panel.frame.contains(NSEvent.mouseLocation) else{return};self.send("close")}
+        pinDragMonitor=NSEvent.addLocalMonitorForEvents(matching:[.leftMouseDown,.leftMouseDragged,.leftMouseUp]){[weak self] event in
+            guard let self,event.window === self.panel else{return event}
+            if event.type == .leftMouseDown {self.pinMouseDown=event;self.pendingPinURL=nil}
+            if event.type == .leftMouseUp {self.pinMouseDown=nil;self.pendingPinURL=nil}
+            if event.type == .leftMouseDragged,let url=self.pendingPinURL,let down=self.pinMouseDown {
+                guard hypot(event.locationInWindow.x-down.locationInWindow.x,event.locationInWindow.y-down.locationInWindow.y)>4 else{return event}
+                self.pendingPinURL=nil
+                let item=NSDraggingItem(pasteboardWriter:url as NSURL)
+                let point=self.web.convert(event.locationInWindow,from:nil)
+                let icon=NSWorkspace.shared.icon(forFile:url.path);icon.size=NSSize(width:36,height:36)
+                item.setDraggingFrame(NSRect(x:point.x-18,y:point.y-18,width:36,height:36),contents:icon)
+                self.web.beginDraggingSession(with:[item],event:down,source:self)
+                return nil
+            }
+            return event
+        }
+        clickMonitor=NSEvent.addGlobalMonitorForEvents(matching:[.leftMouseDown,.rightMouseDown,.otherMouseDown]){[weak self] _ in guard let self else{return};if !self.routeMenuClick(){self.dismissOutsideClick()}}
+        outsideLocalMonitor=NSEvent.addLocalMonitorForEvents(matching:[.leftMouseDown,.rightMouseDown,.otherMouseDown]){[weak self] event in guard let self else{return event};if self.routeMenuClick(){return nil};self.dismissOutsideClick();return event}
     }
+    func routeMenuClick()->Bool {
+        let mouse=NSEvent.mouseLocation
+        let point=CGPoint(x:mouse.x-panel.frame.minX,y:panel.frame.maxY-mouse.y)
+        if clipperBounds.contains(point){captureText();return true}
+        guard menuBounds.contains(point) else{return false}
+        send("toggleMenu");return true
+    }
+    func dismissOutsideClick(){guard expanded,!panel.frame.contains(NSEvent.mouseLocation) else{return};send("close")}
+    func windowDidResignKey(_ notification:Notification){if expanded {send("close")}}
+    func applicationDidResignActive(_ notification:Notification){if expanded {send("close")}}
+    @objc func captureText(){textCapture.capture(hide:{self.send("close");self.panel.orderOut(nil)}){[weak self] message in guard let self else{return};self.panel.orderFrontRegardless();self.send("open");self.send("pinMessage",message)}}
     static func json(_ x:Any)->String { guard JSONSerialization.isValidJSONObject(x) || x is NSNull,let data=try? JSONSerialization.data(withJSONObject:x,options:[.fragmentsAllowed,.sortedKeys]),let value=String(data:data,encoding:.utf8) else{return "null"};return value }
     func send(_ type:String,_ payload:Any=NSNull()) { guard web != nil else{return};let data=Self.json([type,payload]);web.evaluateJavaScript("window.pandaNative?.(...\(data))",completionHandler:nil) }
     func resize(width:Double,height:Double){let screen=selectedScreen;let w=min(max(width,240),screen.frame.width-16),h=min(max(height,selectedScreen.safeAreaInsets.top > 0 ? selectedScreen.safeAreaInsets.top : 28),screen.frame.height-15);let rect=NSRect(x:screen.frame.midX-w/2,y:screen.frame.maxY-h,width:w,height:h);if abs(panel.frame.width-w)>0.5 || abs(panel.frame.height-h)>0.5 || abs(panel.frame.minX-rect.minX)>0.5 || abs(panel.frame.minY-rect.minY)>0.5 {panel.setFrame(rect,display:true)} }
@@ -122,7 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         statusItem.button?.image=NSImage(systemSymbolName:"pawprint.fill",accessibilityDescription:"Panda")
         statusItem.button?.toolTip="Panda · your little corner of calm"
         let menu=NSMenu()
-        for (title,action,key) in [("Open Panda",#selector(openPanel),""),("Quick add a task",#selector(quickAdd),"n"),("Say hello · preview panda",#selector(previewBanner),""),("Toggle quiet mode",#selector(toggleQuiet),""),("Hide Panda",#selector(hidePanel),""),("Open data folder",#selector(showData),""),("Quit Panda",#selector(quit),"q")] {let item=NSMenuItem(title:title,action:action,keyEquivalent:key);item.target=self;menu.addItem(item)}
+        for (title,action,key) in [("Open Panda",#selector(openPanel),""),("Quick add a task",#selector(quickAdd),"n"),("Copy text from screen…",#selector(captureText),""),("Say hello · preview panda",#selector(previewBanner),""),("Toggle quiet mode",#selector(toggleQuiet),""),("Hide Panda",#selector(hidePanel),""),("Open data folder",#selector(showData),""),("Quit Panda",#selector(quit),"q")] {let item=NSMenuItem(title:title,action:action,keyEquivalent:key);item.target=self;menu.addItem(item)}
         statusItem.menu=menu
     }
     func registerShortcut(){var spec=EventTypeSpec(eventClass:OSType(kEventClassKeyboard),eventKind:UInt32(kEventHotKeyPressed));InstallEventHandler(GetApplicationEventTarget(),{_,_,ptr in guard let ptr else{return noErr};let owner=Unmanaged<AppDelegate>.fromOpaque(ptr).takeUnretainedValue();DispatchQueue.main.async{owner.quickAdd()};return noErr},1,&spec,Unmanaged.passUnretained(self).toOpaque(),&eventHandler)
@@ -132,9 +177,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func userContentController(_ userContentController: WKUserContentController,didReceive message:WKScriptMessage){
         guard message.frameInfo.isMainFrame,let url=message.frameInfo.request.url,url.isFileURL,url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path+"/"),let body=message.body as? [String:Any],let type=body["type"] as? String else{return}
         switch type {
-        case "ready":ready=true;send("config",configuration());calendarReader.refresh()
+        case "ready":ready=true;send("config",configuration());music.configure((currentState?["settings"] as? [String:Any])?["musicEnabled"] as? Bool ?? false);if calendarReader.isConnected() {calendarReader.connect()} else {calendarReader.refresh()}
+        case "addPinFiles":addPinFiles()
+        case "preparePinDrag":if NSEvent.pressedMouseButtons & 1 != 0,let id=body["id"] as? String{pendingPinURL=pinFile(id)}
+        case "openPin":if let id=body["id"] as? String,let p=pinRecord(id),p["kind"] as? String == "link",let text=p["url"] as? String,let url=URL(string:text),(["http","https"].contains(url.scheme?.lowercased() ?? "") || (url.isFileURL && (url.host == nil || url.host == "" || url.host == "localhost"))){NSWorkspace.shared.open(url)}
+        case "copyPin":if let id=body["id"] as? String{copyPin(id)}
+        case "clipperBounds":if let x=body["x"] as? Double,let y=body["y"] as? Double,let w=body["width"] as? Double,let h=body["height"] as? Double {clipperBounds=CGRect(x:x,y:y,width:w,height:h)}
+        case "menuBounds":if let x=body["x"] as? Double,let y=body["y"] as? Double,let w=body["width"] as? Double,let h=body["height"] as? Double {menuBounds=CGRect(x:x,y:y,width:w,height:h)}
+        case "captureText":captureText()
         case "calendarConnect":calendarReader.connect()
         case "calendarRefresh":calendarReader.refresh()
+        case "calendarWrite":calendarReader.write(body)
+        case "musicEnabled":music.configure(body["enabled"] as? Bool ?? false)
+        case "openSpotify":if let app=NSRunningApplication.runningApplications(withBundleIdentifier:"com.brave.Browser").first {app.activate(options:[])}
         case "openNotionCalendar":NSWorkspace.shared.open(URL(string:"https://calendar.notion.so")!)
         case "openCalendarApp":NSWorkspace.shared.open(URL(fileURLWithPath:"/System/Applications/Calendar.app"))
         case "resize":if let w=body["width"] as? Double,let h=body["height"] as? Double,w.isFinite,h.isFinite{expanded=body["open"] as? Bool ?? false;resize(width:w,height:h)}
@@ -149,13 +204,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }
     }
     func playCompanionSound(_ kind:String){
-        guard ["tap","tap2","reminder","timer"].contains(kind),kind == "timer" || Date().timeIntervalSince(lastSoundAt)>0.16 else{return}
+        guard ["tap","tap2","reminder","timer","select"].contains(kind),kind == "timer" || Date().timeIntervalSince(lastSoundAt)>0.16 else{return}
         let settings=currentState?["settings"] as? [String:Any]
         if kind == "timer" {guard settings?["sound"] as? Bool == true else{return}}
         else {guard settings?["mascotSounds"] as? Bool != false else{return};if kind == "reminder" && settings?["quiet"] as? Bool == true{return}}
         let url=webRoot.appendingPathComponent("audio").appendingPathComponent(kind+".wav")
         guard let sound=NSSound(contentsOf:url,byReference:true) else{return}
-        lastSoundAt=Date();activeSound?.stop();activeSound=sound;sound.volume=kind == "timer" ? 0.6 : 0.45;sound.play()
+        lastSoundAt=Date();activeSound?.stop();activeSound=sound;sound.volume=kind == "select" ? 1 : (["timer","reminder"].contains(kind) ? 0.85 : 0.45);sound.play()
     }
     func save(_ state:[String:Any]){
         guard state["version"] as? Int == 1, state["tasks"] is [Any],JSONSerialization.isValidJSONObject(state) else{return}
@@ -168,11 +223,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }catch{send("error","Panda couldn’t save to disk. Export a backup before quitting.")}
     }
     func exportState(_ state:[String:Any]){let dialog=NSSavePanel();dialog.nameFieldStringValue="Panda-backup.json";dialog.allowedContentTypes=[.json];dialog.canCreateDirectories=true;NSApp.activate(ignoringOtherApps:true);dialog.begin{[weak self] result in guard result == .OK,let url=dialog.url,let self else{return};do{try JSONSerialization.data(withJSONObject:state,options:[.prettyPrinted,.sortedKeys]).write(to:url,options:.atomic);self.send("exported")}catch{self.send("error","Could not export this backup. Please choose another location.")}}}
+    func pinRecord(_ id:String)->[String:Any]? { (currentState?["pins"] as? [[String:Any]])?.first{$0["id"] as? String == id} }
+    func pinFile(_ id:String)->URL? {
+        guard UUID(uuidString:id) != nil,let p=pinRecord(id),p["kind"] as? String == "file",let name=p["fileName"] as? String,!name.isEmpty,name != ".",name != "..",!name.contains("/"),!name.contains("\\") else{return nil}
+        let root=folder.appendingPathComponent("Pins",isDirectory:true).resolvingSymlinksInPath()
+        let url=root.appendingPathComponent(id,isDirectory:true).appendingPathComponent(name).resolvingSymlinksInPath()
+        guard url.path.hasPrefix(root.path+"/"),(try? url.resourceValues(forKeys:[.isRegularFileKey]).isRegularFile)==true else{return nil}
+        return url
+    }
+    func copyPin(_ id:String){
+        guard let p=pinRecord(id) else{return}
+        let paste=NSPasteboard.general
+        if p["kind"] as? String == "link",let text=p["url"] as? String,let url=URL(string:text),(["http","https"].contains(url.scheme?.lowercased() ?? "") || (url.isFileURL && (url.host == nil || url.host == "" || url.host == "localhost"))) {paste.clearContents();paste.setString(text,forType:.string);send("pinMessage","Link copied.")}
+        else if let url=pinFile(id){paste.clearContents();paste.writeObjects([url as NSURL]);send("pinMessage","File copied. Paste it where you need it.")}
+        else {send("pinMessage","This file is missing. Please pin it again.")}
+    }
+    func addPinFiles(){
+        let dialog=NSOpenPanel();dialog.canChooseDirectories=false;dialog.allowsMultipleSelection=true;dialog.message="Pin a local copy of your résumé or another file. Originals stay unchanged.";dialog.prompt="Pin files"
+        NSApp.activate(ignoringOtherApps:true)
+        dialog.begin{[weak self] result in
+            guard let self,result == .OK else{return}
+            let capacity=max(0,200-((self.currentState?["pins"] as? [Any])?.count ?? 0))
+            var added=[[String:Any]]();var failed=false
+            for url in dialog.urls.prefix(capacity){
+                do {
+                    let values=try url.resourceValues(forKeys:[.isRegularFileKey,.fileSizeKey]);guard values.isRegularFile==true,(values.fileSize ?? 0)<=50_000_000 else{failed=true;continue}
+                    let id=UUID().uuidString;let dir=self.folder.appendingPathComponent("Pins",isDirectory:true).appendingPathComponent(id,isDirectory:true)
+                    try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
+                    try FileManager.default.copyItem(at:url,to:dir.appendingPathComponent(url.lastPathComponent))
+                    added.append(["id":id,"kind":"file","title":String(url.deletingPathExtension().lastPathComponent.prefix(120)),"fileName":url.lastPathComponent,"size":values.fileSize ?? 0,"created":Date().timeIntervalSince1970*1000])
+                }catch{failed=true}
+            }
+            self.send("pinsAdded",added);self.focusPanel()
+            if failed{self.send("pinMessage","Some files could not be pinned. Choose files under 50 MB.")}
+        }
+    }
+    func draggingSession(_ session:NSDraggingSession,sourceOperationMaskFor context:NSDraggingContext)->NSDragOperation{.copy}
+    func draggingSession(_ session:NSDraggingSession,endedAt screenPoint:NSPoint,operation:NSDragOperation){pendingPinURL=nil;pinMouseDown=nil}
     func importState(){let dialog=NSOpenPanel();dialog.allowedContentTypes=[.json];dialog.allowsMultipleSelection=false;dialog.message="Choose a Panda backup. Import replaces your current Panda data.";NSApp.activate(ignoringOtherApps:true);dialog.begin{[weak self] result in guard result == .OK,let url=dialog.url,let self else{return};do{let data=try Data(contentsOf:url);guard data.count<5_000_000 else{throw CocoaError(.fileReadTooLarge)};let value=try JSONSerialization.jsonObject(with:data);if let old=self.currentState{try JSONSerialization.data(withJSONObject:old).write(to:self.folder.appendingPathComponent("before-import-\(Int(Date().timeIntervalSince1970)).json"),options:.atomic)};self.send("import",value)}catch{self.send("error","This file could not be imported. Your current data is unchanged.")}}}
     func webView(_ webView:WKWebView,decidePolicyFor action:WKNavigationAction,decisionHandler:@escaping (WKNavigationActionPolicy)->Void){guard let url=action.request.url else{decisionHandler(.cancel);return};decisionHandler(url.isFileURL&&url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path+"/") ? .allow:.cancel)}
     func webViewWebContentProcessDidTerminate(_ webView:WKWebView){ready=false;web.configuration.userContentController.removeAllUserScripts();let js="window.__PANDA_SAVED__=\(Self.json(currentState as Any? ?? NSNull()));window.__PANDA_CONFIG__=\(Self.json(configuration()));";web.configuration.userContentController.addUserScript(WKUserScript(source:js,injectionTime:.atDocumentStart,forMainFrameOnly:true));webView.reload()}
     func applicationShouldTerminate(_ sender:NSApplication)->NSApplication.TerminateReply{if quitting{return .terminateNow};quitting=true;send("sleep");DispatchQueue.main.asyncAfter(deadline:.now()+0.4){sender.reply(toApplicationShouldTerminate:true)};return .terminateLater}
-    func applicationWillTerminate(_ notification:Notification){ticker?.invalidate();if let hotKey{UnregisterEventHotKey(hotKey)};if let clickMonitor{NSEvent.removeMonitor(clickMonitor)}}
+    func applicationWillTerminate(_ notification:Notification){ticker?.invalidate();if let outsideLocalMonitor{NSEvent.removeMonitor(outsideLocalMonitor)};if let pinDragMonitor{NSEvent.removeMonitor(pinDragMonitor)};if let hotKey{UnregisterEventHotKey(hotKey)};if let clickMonitor{NSEvent.removeMonitor(clickMonitor)}}
 }
 let app=NSApplication.shared
 let delegate=AppDelegate()
