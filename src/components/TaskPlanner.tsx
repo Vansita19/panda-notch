@@ -62,13 +62,13 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   dockFrame.current=requestAnimationFrame(frame);return()=>{if(dockFrame.current)cancelAnimationFrame(dockFrame.current);};
  },[docking]);
  latest.current={range,canWrite,busy,tasks,reduced:s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches,submit,clear,active};
- // Keep one task column mounted. Only its position changes as the calendar is revealed.
+ // Keep one checklist mounted; the expanded halves share the same available width.
  useLayoutEffect(()=>{
   if(previousActive.current===active)return;const was=previousActive.current;previousActive.current=active;
   const node=column.current;if(!node)return;
   const reduce=s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches;
   const taskWidth=parseFloat(getComputedStyle(root.current!).getPropertyValue('--task-column-width'))||364;
-  const wide=Math.min(taskWidth+36+330,screen.availWidth-60),delta=(wide-(taskWidth+36))/2;
+  const wide=Math.min((taskWidth+36)*2,screen.availWidth-60),delta=(wide-(taskWidth+36))/2;
   const inFlight=columnAnimation.current?new DOMMatrixReadOnly(getComputedStyle(node).transform).m41:0;
   columnAnimation.current?.cancel();
   if(!reduce){const animation=node.animate([{transform:`translateX(${inFlight+(active?delta:-delta)}px)`},{transform:'translateX(0px)'}],{duration:notchMotion.open,easing:notchMotion.ease});columnAnimation.current=animation;animation.onfinish=()=>{if(columnAnimation.current===animation)columnAnimation.current=null;};}

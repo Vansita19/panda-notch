@@ -1,7 +1,8 @@
-/* The original checklist remains mounted at its compact width in both modes. */
+/* Both halves share the available width; Compact retains this layout until its clip settles. */
 .task-workspace{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0;color:#e6e8ec;font-size:12px;isolation:isolate}
 .task-checklist{width:min(var(--task-column-width,364px),100%);min-width:0;align-self:start;position:relative;z-index:2}
-.task-workspace[data-active=true]{grid-template-columns:minmax(0,var(--task-column-width,364px)) minmax(220px,1fr);column-gap:36px}
+.task-workspace[data-active=true]{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+.task-workspace[data-active=true]>.task-checklist{width:100%}
 .app-shell[data-planning=true] .view-scroll{overflow-y:auto;overflow-x:clip;min-height:0}
 .task-workspace .task-row{position:relative;overflow:visible;border-radius:8px;background:transparent;transition:background-color 120ms ease}
 .task-workspace .task-row:not(.add-todo-row):hover,.task-workspace .task-row:not(.add-todo-row):focus-within{background:#171a20;box-shadow:inset 0 0 0 1px #ffffff0a}
@@ -58,7 +59,6 @@
 .task-workspace[data-connecting] .task-row:not(.is-connection-active):hover,.task-workspace[data-connecting] .task-row:not(.is-connection-active):focus-within{background:transparent;box-shadow:none}
 .task-row.is-connection-active .thread-node span,.thread-node[aria-pressed=true] span{background:#62a8ff}
 .task-scheduled-time{font-size:9px;line-height:1.5;color:#8e9daf;white-space:normal;background-image:none!important;letter-spacing:0}
-.task-workspace[data-active=true] .task-scheduled-time{display:none}
 .planner-thread .saved-thread{stroke:#626c7b;transition:stroke 140ms ease,opacity 140ms ease}
 .planner-thread .saved-thread.is-active,.planner-thread .loose-thread{stroke:#62a8ff}
 .planner-thread g circle{stroke:#62a8ff}

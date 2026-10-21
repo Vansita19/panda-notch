@@ -13,6 +13,8 @@ export function pinLinkLabel(value){const u=new URL(value);if(u.protocol!=='file
 
 export function validPin(p){try{return !!p&&/^[0-9a-f-]{36}$/i.test(p.id)&&typeof p.title==='string'&&!!p.title.trim()&&p.title.length<=120&&Number.isFinite(p.created)&&(p.kind==='link'?typeof p.url==='string'&&p.url.length<=4000&&normalizePinURL(p.url)===p.url:p.kind==='file'&&typeof p.fileName==='string'&&!!p.fileName&&!/[\/\\]/.test(p.fileName)&&!['.','..'].includes(p.fileName)&&Number.isFinite(p.size)&&p.size>=0);}catch{return false;}}
 export const taskPriorityValues=['low','medium','high'];
+const viewValues=['today','tasks','focus','pins','dump','reminders'];
+export function resumeView(state,target){return viewValues.includes(target)?target:viewValues.includes(state?.lastView)?state.lastView:'today';}
 const minute=60000;
 export const stepTimerMinutes=(value,direction)=>Math.max(1,Math.min(120,(direction>0?Math.floor(value/5)+1:Math.ceil(value/5)-1)*5));
 export const dayKey=(now=Date.now())=>{const d=new Date(now);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
@@ -23,7 +25,7 @@ export const messages=[{title:'Drink water, buddy.',sub:'A little sip. A little 
 export const durations=(s,mode)=>({focus:s.settings.focusMinutes,short:s.settings.shortMinutes,long:s.settings.longMinutes}[mode]*60);
 const timerNotice=(mode,now)=>({kind:'timer',id:uid(),at:now,title:mode==='focus'?'Ready for a fresh start?':'You did it. Take a break.',sub:mode==='focus'?'Your next focus session is ready.':'Your break is ready when you are.'});
 export function initialState(now=Date.now()){
- return {version:1,calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false};
+ return {version:1,lastView:'today',calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false};
 }
 export function sampleEvents(now){return [{id:uid(),title:'A little planning time',start:now+20*minute,end:now+50*minute,color:'blue'},{id:uid(),title:'Make room for creative work',start:now+90*minute,end:now+150*minute,color:'peach'}];}
 export function remaining(t,now=Date.now()){return Math.max(0,Math.ceil(t.seconds-(t.running?Math.max(0,now-t.startedAt)/1000:0)));}
@@ -31,6 +33,7 @@ export function validateState(x){
  const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
  const fail=()=>{throw Error('This backup is not a valid Panda file. Your current data is safe.');};
  if(!x||x.version!==1||!Array.isArray(x.tasks)||x.tasks.length>5000||!Array.isArray(x.events)||x.events.length>1000)fail();
+ if(x.lastView!==undefined&&!viewValues.includes(x.lastView))fail();
  if(x.lastGreetingDay!=null&&(typeof x.lastGreetingDay!=='string'||!/^\d{4}-\d{1,2}-\d{1,2}$/.test(x.lastGreetingDay)))fail();
  if(x.pins!==undefined&&(!Array.isArray(x.pins)||x.pins.length>200||x.pins.some(p=>!validPin(p))||new Set(x.pins.map(p=>p.id)).size!==x.pins.length))fail();
  if(x.brainDump!==undefined&&(typeof x.brainDump!=='string'||x.brainDump.length>100000))fail();
@@ -60,11 +63,12 @@ export function validateState(x){
  for(const value of Object.values(x.snoozed))if(!Number.isFinite(value))fail();
  return structuredClone(x);
 }
-export function restore(x){const s=validateState(x);s.pins??=[];s.brainDump??='';s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:Date.now()}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return s;}
+export function restore(x){const s=validateState(x);s.lastView??='today';s.pins??=[];s.brainDump??='';s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:Date.now()}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return s;}
 export function reduce(state,a,now=Date.now()){
  if(a.type==='checkpoint'&&!state.timer.running)return state;
  const s=structuredClone(state),t=s.timer;
  switch(a.type){
+ case 'view':if(!viewValues.includes(a.view)||s.lastView===a.view)return state;s.lastView=a.view;break;
  case 'calendarLinks':{const entries=a.links??[];s.tasks=reconcileTaskLinks(s.tasks,entries.filter(v=>v.event).map(v=>v.event)).map(t=>entries.some(v=>v.taskId===t.id&&v.missing)&&t.calendarLink?{...t,calendarLink:{...t.calendarLink,missing:true}}:t);if(JSON.stringify(s.tasks)===JSON.stringify(state.tasks))return state;break;}
  case 'taskCalendarLinked':s.tasks=s.tasks.map(v=>v.id===a.id?{...v,calendarLink:{...v.calendarLink,...a.link}}:v);break;
  case 'taskCalendarUnlinked':s.tasks=s.tasks.map(v=>{if(v.id!==a.id)return v;const {calendarLink,...task}=v;return task;});break;

@@ -32,7 +32,7 @@ function CardArtwork({id,label}:{id:string;label:string}){
    {asset('imgVector4','menu-layer menu-links-glow')}
    {asset('imgBiPinAngle','menu-layer menu-card-icon')}
    {asset('imgMaskGroup','menu-layer menu-links-mask')}
-   <span className="menu-layer menu-links-wave" style={{maskImage:'url("menu/imgMaskGroup.svg")',WebkitMaskImage:'url("menu/imgMaskGroup.svg")'}}>{Array.from({length:25},(_,i)=><span className="menu-wave-bar" key={i} style={{left:`${i*6.51078}px`}}/>)}</span>
+   <span className="menu-layer menu-links-wave" style={{maskImage:'url("menu/imgMaskGroup.svg")',WebkitMaskImage:'url("menu/imgMaskGroup.svg")'}}>{Array.from({length:25},(_,i)=><span className="menu-wave-bar" key={i} style={{left:`${i*6.51078}px`,backgroundImage:'url("menu/imgMaskGroup.svg")'}}/>)}</span>
    <span className="menu-card-label">{label}</span>
   </>}
   {id==='dump'&&<>

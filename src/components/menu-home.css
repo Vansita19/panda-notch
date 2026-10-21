@@ -28,15 +28,40 @@
 .menu-icon-clip{z-index:2;position:absolute;left:17px;top:17px;width:36px;height:36px;overflow:hidden}
 .menu-focus-icon{left:2.2464px;top:1.1268px}
 .menu-links-glow{left:-64px;top:-33px}
-.menu-links-mask{left:-3px;top:-1px}
+.menu-links-mask{left:-3px;top:-1px;visibility:hidden}
 .menu-ideas-glow{left:-64px;top:-33px}
 .menu-ideas-icon{left:3.127px;top:2.4396px}
 .menu-reminders-ring-one{left:43.01px;top:68.01px}
 .menu-reminders-ring-two{left:27.3px;top:52.3px}
 .menu-reminders-ring-three{left:11.6px;top:36.6px}
-/* The mask is static; only the individual bars scale while the card is hovered. */
-.menu-links-wave{left:-3px;top:-1px;width:180.441px;height:173px;opacity:0;mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;mask-size:180.441px 173px;-webkit-mask-size:180.441px 173px;overflow:hidden}
-.menu-wave-bar{position:absolute;top:0;width:6.51078px;height:173px;background:#a0c386;transform-origin:50% 105px}
+/* Each strip uses its original artwork pixels: motion never dims or swaps the link design. */
+.menu-links-wave{left:-3px;top:-1px;width:180.441px;height:173px;opacity:1;mask-image:none!important;-webkit-mask-image:none!important;overflow:hidden}
+.menu-wave-bar{position:absolute;top:0;width:6.51078px;height:173px;background-repeat:no-repeat;background-size:180.441px 173px;background-position:calc(var(--menu-bar-index,0) * -6.51078px) 0;transform-origin:50% 105px}
+.menu-wave-bar:nth-child(1){--menu-bar-index:0}
+.menu-wave-bar:nth-child(2){--menu-bar-index:1}
+.menu-wave-bar:nth-child(3){--menu-bar-index:2}
+.menu-wave-bar:nth-child(4){--menu-bar-index:3}
+.menu-wave-bar:nth-child(5){--menu-bar-index:4}
+.menu-wave-bar:nth-child(6){--menu-bar-index:5}
+.menu-wave-bar:nth-child(7){--menu-bar-index:6}
+.menu-wave-bar:nth-child(8){--menu-bar-index:7}
+.menu-wave-bar:nth-child(9){--menu-bar-index:8}
+.menu-wave-bar:nth-child(10){--menu-bar-index:9}
+.menu-wave-bar:nth-child(11){--menu-bar-index:10}
+.menu-wave-bar:nth-child(12){--menu-bar-index:11}
+.menu-wave-bar:nth-child(13){--menu-bar-index:12}
+.menu-wave-bar:nth-child(14){--menu-bar-index:13}
+.menu-wave-bar:nth-child(15){--menu-bar-index:14}
+.menu-wave-bar:nth-child(16){--menu-bar-index:15}
+.menu-wave-bar:nth-child(17){--menu-bar-index:16}
+.menu-wave-bar:nth-child(18){--menu-bar-index:17}
+.menu-wave-bar:nth-child(19){--menu-bar-index:18}
+.menu-wave-bar:nth-child(20){--menu-bar-index:19}
+.menu-wave-bar:nth-child(21){--menu-bar-index:20}
+.menu-wave-bar:nth-child(22){--menu-bar-index:21}
+.menu-wave-bar:nth-child(23){--menu-bar-index:22}
+.menu-wave-bar:nth-child(24){--menu-bar-index:23}
+.menu-wave-bar:nth-child(25){--menu-bar-index:24}
 .menu-focus-core{left:10px;top:22px;width:140px;height:140px;opacity:0;transform:scale(.9);background:radial-gradient(ellipse,rgba(224,205,255,.75),rgba(176,144,255,.28) 35%,transparent 68%)}
 @media(prefers-reduced-motion:reduce){.menu-home .menu-card{transition:none}.menu-home .menu-card:active{transform:none!important}}
 [data-reduced=true] .menu-home .menu-card,[data-input-modality=keyboard] .menu-home .menu-card{transition:none}

@@ -375,7 +375,14 @@ body{position:fixed;inset:0}
 /* Navigation and the chosen page share one reveal; they never arrive in separate layouts. */
 .panel-body{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
 
-.task-text>.task-row-priority{display:inline-flex;margin-left:7px;vertical-align:-1px;background-image:none!important;white-space:nowrap}
+/* Name and checkbox stay left; the time and priority form one quiet right-hand group. */
+.task-workspace .task-text{display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:3px}
+.task-workspace .task-text>.task-title{flex:1 1 150px;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.task-workspace .task-text>.task-meta{display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 1 auto;min-width:0;max-width:100%;margin-left:auto;background-image:none!important}
+.task-workspace .task-meta>.task-scheduled-time{min-width:0;white-space:normal;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.task-workspace .task-meta>.task-row-priority{display:inline-flex;flex:0 0 13px;margin:0;background-image:none!important;white-space:nowrap}
+.task-workspace .row-actions{flex:0 0 auto;align-self:center;pointer-events:none}
+.task-workspace .task-row:hover .row-actions,.task-workspace .task-row:focus-within .row-actions{pointer-events:auto}
 /* Feedback sits beneath the painted notch, outside its animated clipping canvas. */
 .toast-position{position:absolute;left:0;right:0;top:0;z-index:50;display:grid;justify-items:center;pointer-events:none}
 .toast-position>.toast{position:relative;inset:auto;grid-area:1 / 1;width:max-content;max-width:min(372px,calc(100% - 28px));min-height:40px;margin:0;pointer-events:auto}
