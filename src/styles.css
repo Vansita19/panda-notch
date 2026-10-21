@@ -377,7 +377,7 @@ body{position:fixed;inset:0}
 
 /* Name and checkbox stay left; the time and priority form one quiet right-hand group. */
 .task-workspace .task-text{display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:3px}
-.task-workspace .task-text>.task-title{flex:1 1 150px;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.task-workspace .task-text>.task-title{flex:1 1 96px;min-width:0;max-width:100%;overflow-wrap:anywhere}
 .task-workspace .task-text>.task-meta{display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 1 auto;min-width:0;max-width:100%;margin-left:auto;background-image:none!important}
 .task-workspace .task-meta>.task-scheduled-time{min-width:0;white-space:normal;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .task-workspace .task-meta>.task-row-priority{display:inline-flex;flex:0 0 13px;margin:0;background-image:none!important;white-space:nowrap}
