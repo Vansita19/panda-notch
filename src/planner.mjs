@@ -32,6 +32,31 @@ export function selectionRange(anchor,current,range){
  return {start,end};
 }
 export function validSlot(start,end){return Number.isFinite(start)&&Number.isFinite(end)&&end>start&&end-start<=86400000;}
+// Keep one rendered identity from the first dragged selection through Calendar's acknowledgement.
+export function mergePlannerEvents(events=[],tasks=[],preview=null){
+ const result=[],byTask=new Map(),visibleTask=new Map(tasks.map(task=>[task.id,task]));
+ for(const event of events){
+  if(!event.taskId){result.push(event);continue;}
+  if(byTask.has(event.taskId))continue;
+  const task=visibleTask.get(event.taskId),link=task?.calendarLink;
+  // A write acknowledgement updates the task before EventKit's next snapshot arrives.
+  if(task&&(!link||link.missing||!validSlot(link.start,link.end)))continue;
+  const canonical=task?{start:link.start,end:link.end,title:task.title,allDay:false}:{};
+  byTask.set(event.taskId,result.length);result.push({...event,...canonical,id:'task:'+event.taskId});
+ }
+ for(const task of tasks){
+  const link=task.calendarLink;
+  if(!link||link.missing||byTask.has(task.id)||!validSlot(link.start,link.end))continue;
+  byTask.set(task.id,result.length);result.push({...link,id:'task:'+task.id,taskId:task.id,title:task.title,allDay:false});
+ }
+ if(preview?.taskId&&validSlot(preview.start,preview.end)){
+  const index=byTask.get(preview.taskId),existing=index===undefined?{}:result[index];
+  const task=tasks.find(task=>task.id===preview.taskId);
+  const event={...existing,id:'task:'+preview.taskId,taskId:preview.taskId,start:preview.start,end:preview.end,title:task?.title??preview.title??existing.title??'',allDay:false,phase:preview.phase};
+  if(index===undefined)result.push(event);else result[index]=event;
+ }
+ return result;
+}
 export function layoutEvents(events,range){
  const sorted=events.filter(e=>!e.allDay&&e.end>range.start&&e.start<range.end).map(e=>({...e,top:Math.max(e.start,range.start),bottom:Math.min(e.end,range.end)})).sort((a,b)=>a.top-b.top||b.bottom-a.bottom);
  const groups=[];let group=[],until=-Infinity;

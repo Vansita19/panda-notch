@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {dayRange,slotAt,timeAt,hoverHourAt,selectionRange,validSlot,layoutEvents,reconcileTaskLinks} from '../src/planner.mjs';
+import {dayRange,slotAt,timeAt,hoverHourAt,selectionRange,validSlot,layoutEvents,mergePlannerEvents,reconcileTaskLinks} from '../src/planner.mjs';
 import {initialState,reduce,restore} from '../src/model.mjs';
 test('today range and drops clamp to working hours on a quarter hour',()=>{const r=dayRange(new Date(2026,9,21,12).getTime());assert.equal(new Date(r.start).getHours(),7);assert.equal(new Date(r.end).getHours(),23);assert.deepEqual(slotAt(-10,640,r),{start:r.start,end:r.start+1800000});assert.equal(slotAt(900,640,r).end,r.end);assert.equal(slotAt(100,0,r),null);assert.equal((slotAt(101,640,r).start-r.start)%900000,0);});
 test('invalid and inverted durations cannot reach calendar',()=>{assert.equal(validSlot(10,5),false);assert.equal(validSlot(NaN,100),false);assert.equal(validSlot(0,90000000),false);assert.equal(validSlot(0,1800000),true);});
@@ -39,4 +39,61 @@ test('calendar drag retains a minimum quarter hour and respects day limits',()=>
  assert.deepEqual(selectionRange(22*HOUR+45*MINUTE,24*HOUR,workday),{start:22*HOUR+45*MINUTE,end:23*HOUR});
  assert.equal(selectionRange(NaN,9*HOUR,workday),null);
  assert.equal(selectionRange(9*HOUR,10*HOUR,{start:10,end:0}),null);
+});
+
+test('task event previews replace stale provider entries without hiding other commitments',()=>{
+ const task={id:'task-a',title:'Current task name',calendarLink:{eventId:'provider-a',calendarId:'work',start:8*HOUR,end:9*HOUR,color:'#b698ff'}};
+ const unrelated={id:'meeting',title:'Team meeting',start:10*HOUR,end:11*HOUR,calendarId:'team'};
+ const base=[{id:'old-a',taskId:'task-a',eventId:'provider-a',calendarId:'work',calendarLabel:'Work',writable:true,title:'Old task name',start:8*HOUR,end:9*HOUR},unrelated,{id:'duplicate-a',taskId:'task-a',start:8*HOUR,end:9*HOUR},{id:'other-task',taskId:'task-b',title:'Another task',start:12*HOUR,end:13*HOUR}];
+ const result=mergePlannerEvents(base,[task],{taskId:'task-a',start:14*HOUR,end:16*HOUR,title:'Stale preview name',phase:'selecting'});
+ assert.equal(result.length,3);
+ const active=result.find(e=>e.taskId==='task-a');
+ assert.deepEqual([active.id,active.start,active.end,active.title,active.phase],['task:task-a',14*HOUR,16*HOUR,'Current task name','selecting']);
+ assert.deepEqual([active.eventId,active.calendarId,active.calendarLabel,active.writable],['provider-a','work','Work',true]);
+ assert.equal(result.find(e=>e.id==='meeting'),unrelated);
+ assert.equal(result.find(e=>e.taskId==='task-b').id,'task:task-b');
+ assert.equal(base[0].id,'old-a');assert.equal(base[0].start,8*HOUR);
+});
+test('selection, pending save, acknowledgement, and provider refresh retain one task identity',()=>{
+ const task={id:'new-task',title:'Prepare review'};
+ const slot={taskId:task.id,start:9*HOUR,end:11*HOUR,title:task.title};
+ const selecting=mergePlannerEvents([], [task], {...slot,phase:'selecting'});
+ const saving=mergePlannerEvents([], [task], {...slot,phase:'saving'});
+ const linked={...task,calendarLink:{eventId:'saved',calendarId:'work',start:slot.start,end:slot.end}};
+ const committed=mergePlannerEvents([], [linked], {...slot,phase:'committed'});
+ const refreshed=mergePlannerEvents([{id:'provider-changing-id',taskId:task.id,eventId:'saved',calendarId:'work',start:slot.start,end:slot.end,title:task.title,writable:true}], [linked]);
+ for(const result of [selecting,saving,committed,refreshed]){
+  assert.equal(result.length,1);assert.equal(result[0].id,'task:new-task');
+  assert.equal(result[0].start,slot.start);assert.equal(result[0].end,slot.end);
+ }
+ assert.equal(refreshed[0].eventId,'saved');
+ assert.equal(refreshed[0].writable,true);
+});
+test('missing or absent links stay absent while valid previews can still represent a new selection',()=>{
+ const tasks=[{id:'none',title:'Unscheduled'},{id:'missing',title:'Missing event',calendarLink:{missing:true,eventId:'gone',start:8*HOUR,end:9*HOUR}},{id:'linked',title:'Later task',calendarLink:{eventId:'later',calendarId:'work',start:25*HOUR,end:26*HOUR}}];
+ const merged=mergePlannerEvents([],tasks);
+ assert.equal(merged.length,1);assert.equal(merged[0].taskId,'linked');
+ assert.equal(layoutEvents(merged,workday).length,0);
+ const preview=mergePlannerEvents([],tasks,{taskId:'missing',start:8*HOUR,end:9*HOUR,phase:'selecting'});
+ assert.equal(preview.length,2);assert.equal(preview.find(e=>e.taskId==='missing').title,'Missing event');
+ assert.equal(mergePlannerEvents([],tasks,{taskId:'none',start:9*HOUR,end:8*HOUR,phase:'saving'}).length,1);
+});
+
+test('acknowledged task time wins until the provider snapshot catches up',()=>{
+ const task={id:'rescheduled',title:'Updated task title',calendarLink:{eventId:'event-a',calendarId:'work',start:9*HOUR,end:11*HOUR}};
+ const stale={id:'old-time-id',taskId:task.id,title:'Old task title',eventId:'event-a',calendarId:'work',calendarLabel:'Work',writable:true,start:7*HOUR,end:9*HOUR};
+ const result=mergePlannerEvents([stale],[task]);
+ assert.equal(result.length,1);
+ assert.deepEqual([result[0].start,result[0].end,result[0].title],[9*HOUR,11*HOUR,'Updated task title']);
+ assert.deepEqual([result[0].id,result[0].eventId,result[0].calendarLabel,result[0].writable],['task:rescheduled','event-a','Work',true]);
+ const refreshed=mergePlannerEvents([{...stale,id:'new-time-id',start:9*HOUR,end:11*HOUR}],[task]);
+ assert.equal(refreshed[0].id,result[0].id);
+});
+test('unlink acknowledgement hides stale owned events without hiding tasks outside the visible list',()=>{
+ const stale=[{id:'unlinked-event',taskId:'unlinked',title:'Removed time',start:7*HOUR,end:8*HOUR},{id:'missing-event',taskId:'missing',title:'Unavailable time',start:8*HOUR,end:9*HOUR},{id:'other-day-task',taskId:'not-visible',title:'Calendar commitment',start:9*HOUR,end:10*HOUR}];
+ const tasks=[{id:'unlinked',title:'Task stays here'},{id:'missing',title:'Missing task',calendarLink:{missing:true,start:8*HOUR,end:9*HOUR}}];
+ const result=mergePlannerEvents(stale,tasks);
+ assert.equal(result.length,1);assert.equal(result[0].taskId,'not-visible');assert.equal(result[0].title,'Calendar commitment');
+ const preview=mergePlannerEvents(stale,tasks,{taskId:'unlinked',start:11*HOUR,end:12*HOUR,phase:'selecting'});
+ assert.equal(preview.length,2);assert.equal(preview.find(e=>e.taskId==='unlinked').title,'Task stays here');
 });

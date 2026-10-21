@@ -47,3 +47,26 @@
 .planner-connect{font-size:11px;line-height:1.6;color:#aab4c2}.planner-all-day{display:flex;flex-direction:column;gap:4px;font-size:9px;color:#b9c8df;margin:0 0 14px 28px}.planner-all-day span{background:#6383ad22;padding:5px;border-radius:4px}
 
 @media(prefers-reduced-motion:reduce){.task-checklist,.planner-day{animation:none;transition:none}}
+
+/* Keep the connection target separate from move/delete controls. */
+.task-workspace .task-row:not(.add-todo-row){padding-right:32px}
+.thread-node{right:-12px;width:24px;height:28px}
+.thread-node span{width:6px;height:6px;background:#8e98a7}
+.thread-node[data-linked=true],.task-row.is-connection-active .thread-node{opacity:1}
+.task-workspace .task-row.is-connection-active{background:#152335;box-shadow:inset 0 0 0 1px #62a8ff38}
+.task-workspace[data-connecting] .task-row:not(.is-connection-active):hover,.task-workspace[data-connecting] .task-row:not(.is-connection-active):focus-within{background:transparent;box-shadow:none}
+.task-row.is-connection-active .thread-node span,.thread-node[aria-pressed=true] span{background:#62a8ff}
+.task-scheduled-time{font-size:9px;line-height:1.5;color:#8e9daf;white-space:normal;background-image:none!important;letter-spacing:0}
+.task-workspace[data-active=true] .task-scheduled-time{display:none}
+.planner-thread .saved-thread{stroke:#626c7b;transition:stroke 140ms ease,opacity 140ms ease}
+.planner-thread .saved-thread.is-active,.planner-thread .loose-thread{stroke:#62a8ff}
+.planner-thread g circle{stroke:#62a8ff}
+.planner-event{transition:background-color 160ms ease,border-color 160ms ease,opacity 160ms ease}
+.planner-event>button:first-child{transition:opacity 160ms ease}
+.planner-event[data-phase=selecting]{border:1px dashed #83b9ff;background:#62a8ff0d}
+.planner-event[data-phase=selecting]>button:first-child{opacity:0;pointer-events:none}
+.planner-event.is-connection-active{border-color:#62a8ff}
+.planner-event[data-phase=saving]{opacity:.8;background:color-mix(in srgb,var(--event-color) 24%,#15202b)}
+.planner-ghost{border-color:#83b9ff;background:#62a8ff0d}
+@media(prefers-reduced-motion:reduce){.planner-thread .saved-thread,.planner-event,.planner-event>button:first-child{transition:none}}
+[data-reduced=true] .planner-thread .saved-thread,[data-reduced=true] .planner-event,[data-reduced=true] .planner-event>button:first-child{transition:none}
