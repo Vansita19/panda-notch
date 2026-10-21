@@ -49,7 +49,8 @@
 @media(prefers-reduced-motion:reduce){.task-checklist,.planner-day{animation:none;transition:none}}
 
 /* Keep the connection target separate from move/delete controls. */
-.task-workspace .task-row:not(.add-todo-row){padding-right:32px}
+.task-workspace .task-row:not(.add-todo-row){padding-right:8px}
+.task-workspace[data-active=true] .task-row:not(.add-todo-row){padding-right:20px}
 .thread-node{right:-12px;width:24px;height:28px}
 .thread-node span{width:6px;height:6px;background:#8e98a7}
 .thread-node[data-linked=true],.task-row.is-connection-active .thread-node{opacity:1}

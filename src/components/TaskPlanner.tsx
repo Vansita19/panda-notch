@@ -1,5 +1,5 @@
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {CalendarDays,ArrowLeft,Clock3,X,Unlink} from 'lucide-react';
+import {Maximize2,Minimize2,Clock3,X,Unlink} from 'lucide-react';
 import {Button} from '../arc/button/button';
 import {host,native} from '../bridge';
 import {writeCalendar} from '../calendar-write';
@@ -129,7 +129,7 @@ export function TaskPlanner({s,info,dispatch,active,onToggle,renderTasks,notify,
  const hours=Array.from({length:endHour-startHour+1},(_,i)=>startHour+i),allDay=s.events.filter((e:any)=>e.allDay&&e.start<range.end&&e.end>range.start);
  return <div className="task-workspace" data-active={active} data-connecting={linking||busy||docking||undefined} ref={root} onPointerOver={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');setHoveredTask(task?.dataset.linkedTask||null);}} onPointerLeave={()=>setHoveredTask(null)} onFocusCapture={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');setHoveredTask(task?.dataset.linkedTask||null);}} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setHoveredTask(null);}}>
   <section className="task-checklist" ref={column}>
-   <div className="todo-heading-row"><div className="todo-heading">To-do</div><Button variant="secondary" size="sm" aria-expanded={active} aria-controls="planner-calendar" onClick={onToggle}>{active?<ArrowLeft size={12}/>:<CalendarDays size={12}/>} {active?'Compact view':'Plan my day'}</Button></div>
+   <div className="todo-heading-row"><div className="todo-heading">To-do</div><Button variant="secondary" size="sm" aria-expanded={active} aria-controls="planner-calendar" onClick={onToggle}>{active?<Minimize2 size={12}/>:<Maximize2 size={12}/>} {active?'Compact':'Expand'}</Button></div>
    {renderTasks(nodeForTask,(t:any)=>t.calendarLink?<button type="button" aria-label={`Edit scheduled time for ${t.title}`} title={t.calendarLink.missing?'Event unavailable · manage scheduled time':'Edit scheduled time'} onClick={()=>{if(!active)onToggle();clear();setSelected(t.id);}}><Clock3 size={12}/></button>:null,highlightedTask)}
   </section>
   <section id="planner-calendar" className="planner-day" ref={day} aria-label="Day calendar" inert={!active}>
