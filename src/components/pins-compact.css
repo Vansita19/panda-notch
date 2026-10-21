@@ -1,0 +1,22 @@
+.pins-view .pins-list{gap:2px}
+.pins-view .pin-row{min-height:38px;gap:9px;padding:3px 0}
+.pins-view .pin-kind.pin-icon-tile{
+ --pin-glow:20,76,205;
+ --pin-highlight:102,148,255;
+ position:relative;
+ display:grid;
+ place-items:center;
+ flex:0 0 28px;
+ width:28px;
+ height:28px;
+ overflow:hidden;
+ isolation:isolate;
+ border:1px solid #ffffff10;
+ border-radius:6px;
+ color:#adc4ee;
+ background:linear-gradient(#0a0909,#09101f);
+ box-shadow:inset 0 -6px 5px -3px rgba(var(--pin-glow),.65),inset 0 -3px 3px -1px rgba(var(--pin-highlight),.35),inset 0 1px 1px #2365ff26;
+}
+.pin-icon-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 -1.5px 1.5px -.5px #ffffff26;mix-blend-mode:plus-lighter;pointer-events:none}
+.pins-view .pin-icon-tile[data-pin-kind=file]{--pin-glow:67,112,85;--pin-highlight:145,184,154;color:#b4c8b8}
+.pins-view .pin-label>strong{display:-webkit-box;min-width:0;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;overflow-wrap:anywhere;font-size:12px;line-height:1.35}

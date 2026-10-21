@@ -1,5 +1,5 @@
 /* Both halves share the available width; Compact retains this layout until its clip settles. */
-.task-workspace{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0;color:#e6e8ec;font-size:12px;isolation:isolate}
+.task-workspace{--task-action-reveal:52px;position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0;color:#e6e8ec;font-size:12px;isolation:isolate}
 .task-checklist{width:min(var(--task-column-width,364px),100%);min-width:0;align-self:start;position:relative;z-index:2}
 .task-workspace[data-active=true]{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
 .task-workspace[data-active=true]>.task-checklist{width:100%}
@@ -50,8 +50,8 @@
 @media(prefers-reduced-motion:reduce){.task-checklist,.planner-day{animation:none;transition:none}}
 
 /* Keep the connection target separate from move/delete controls. */
-.task-workspace .task-row:not(.add-todo-row){padding-right:8px}
-.task-workspace[data-active=true] .task-row:not(.add-todo-row){padding-right:20px}
+.task-workspace .task-row:not(.add-todo-row){--task-action-inset:8px;padding-right:var(--task-action-inset)}
+.task-workspace[data-active=true] .task-row:not(.add-todo-row){--task-action-inset:20px}
 .thread-node{right:-12px;width:24px;height:28px}
 .thread-node span{width:6px;height:6px;background:#8e98a7}
 .thread-node[data-linked=true],.task-row.is-connection-active .thread-node{opacity:1}

@@ -375,14 +375,17 @@ body{position:fixed;inset:0}
 /* Navigation and the chosen page share one reveal; they never arrive in separate layouts. */
 .panel-body{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
 
-/* Name and checkbox stay left; the time and priority form one quiet right-hand group. */
-.task-workspace .task-text{display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:3px}
-.task-workspace .task-text>.task-title{flex:1 1 96px;min-width:0;max-width:100%;overflow-wrap:anywhere}
-.task-workspace .task-text>.task-meta{display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 1 auto;min-width:0;max-width:100%;margin-left:auto;background-image:none!important}
+/* The row keeps its layout while metadata makes room for contextual actions. */
+.task-workspace .task-text{display:flex;align-items:center;flex-wrap:wrap;column-gap:calc(12px + var(--task-action-reveal));row-gap:3px}
+.task-workspace .task-text>.task-title{flex:1 1 96px;min-width:0;max-width:calc(100% - var(--task-action-reveal));overflow-wrap:anywhere}
+.task-workspace .task-text>.task-meta{display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 1 auto;min-width:0;max-width:calc(100% - var(--task-action-reveal));margin-left:auto;background-image:none!important;transform:translateX(0);transition:transform 200ms cubic-bezier(.22,1,.36,1)}
 .task-workspace .task-meta>.task-scheduled-time{min-width:0;white-space:normal;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .task-workspace .task-meta>.task-row-priority{display:inline-flex;flex:0 0 13px;margin:0;background-image:none!important;white-space:nowrap}
-.task-workspace .row-actions{flex:0 0 auto;align-self:center;pointer-events:none}
-.task-workspace .task-row:hover .row-actions,.task-workspace .task-row:focus-within .row-actions{pointer-events:auto}
+.task-workspace .row-actions{position:absolute;right:var(--task-action-inset);top:50%;width:48px;transform:translate(6px,-50%);opacity:0;pointer-events:none;transition:transform 200ms cubic-bezier(.22,1,.36,1),opacity 200ms cubic-bezier(.22,1,.36,1)}
+.task-workspace .task-row:hover .task-meta,.task-workspace .task-row:focus-within .task-meta{transform:translateX(calc(-1 * var(--task-action-reveal)))}
+.task-workspace .task-row:hover .row-actions,.task-workspace .task-row:focus-within .row-actions{transform:translate(0,-50%);opacity:1;pointer-events:auto}
+@media(prefers-reduced-motion:reduce){.task-workspace .task-meta,.task-workspace .row-actions{transition:none}}
+[data-reduced=true] .task-workspace .task-meta,[data-reduced=true] .task-workspace .row-actions,[data-input-modality=keyboard] .task-workspace .task-meta,[data-input-modality=keyboard] .task-workspace .row-actions{transition:none}
 /* Feedback sits beneath the painted notch, outside its animated clipping canvas. */
 .toast-position{position:absolute;left:0;right:0;top:0;z-index:50;display:grid;justify-items:center;pointer-events:none}
 .toast-position>.toast{position:relative;inset:auto;grid-area:1 / 1;width:max-content;max-width:min(372px,calc(100% - 28px));min-height:40px;margin:0;pointer-events:auto}

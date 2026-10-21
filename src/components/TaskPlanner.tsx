@@ -12,7 +12,7 @@ import {eventDraftUpdate,stepEventTime,anchoredPosition} from '../event-details.
 import './task-planner.css';
 const clock=(ms:number)=>new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
 const inputTime=(ms:number)=>{const d=new Date(ms);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
-export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,renderTasks,notify,now}:any){
+export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,renderTasks,notify,now,heading='Today'}:any){
  const isLayoutActive=layoutActive??active;
  const [calendarId,setCalendarId]=useState(''),[busy,setBusy]=useState<string|null>(null),[error,setError]=useState(''),[selected,setSelected]=useState<string|null>(null),[selectedAnchor,setSelectedAnchor]=useState<'task'|'calendar'>('calendar'),[editorFloor,setEditorFloor]=useState(0),[linking,setLinking]=useState<string|null>(null),[ghost,setGhost]=useState<any>(null),[preview,setPreview]=useState<any>(null),[hoveredTask,setHoveredTask]=useState<string|null>(null),[docking,setDocking]=useState<string|null>(null),[manipulating,setManipulating]=useState<string|null>(null);
  const root=useRef<HTMLDivElement>(null),column=useRef<HTMLElement>(null),day=useRef<HTMLElement>(null),grid=useRef<HTMLDivElement>(null),path=useRef<SVGPathElement>(null),tip=useRef<SVGGElement>(null);
@@ -138,7 +138,7 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
  const hours=Array.from({length:endHour-startHour+1},(_,i)=>startHour+i),allDay=s.events.filter((e:any)=>e.allDay&&e.start<range.end&&e.end>range.start);
  return <div className="task-workspace" data-active={isLayoutActive} data-connecting={linking||manipulating||busy||docking||undefined} ref={root} style={current?{minHeight:editorFloor}:undefined} onPointerOver={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');setHoveredTask(task?.dataset.linkedTask||null);}} onPointerLeave={()=>setHoveredTask(null)} onFocusCapture={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');setHoveredTask(task?.dataset.linkedTask||null);}} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setHoveredTask(null);}}>
   <section className="task-checklist" ref={column}>
-   <div className="todo-heading-row"><div className="todo-heading">To-do</div><Button variant="secondary" size="sm" aria-expanded={active} aria-controls="planner-calendar" onClick={onToggle}>{active?<Minimize2 size={12}/>:<Maximize2 size={12}/>} {active?'Compact':'Expand'}</Button></div>
+   <div className="todo-heading-row"><div className="todo-heading">{heading}</div><Button variant="secondary" size="sm" aria-expanded={active} aria-controls="planner-calendar" onClick={onToggle}>{active?<Minimize2 size={12}/>:<Maximize2 size={12}/>} {active?'Compact':'Expand'}</Button></div>
    {renderTasks(nodeForTask,(task:any)=>{clear();setSelectedAnchor('task');setSelected(task.id);},highlightedTask)}
   </section>
   <section id="planner-calendar" className="planner-day" ref={day} aria-label="Day calendar" inert={!isLayoutActive}>
