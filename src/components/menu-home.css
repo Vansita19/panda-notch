@@ -66,3 +66,13 @@
 @media(prefers-reduced-motion:reduce){.menu-home .menu-card{transition:none}.menu-home .menu-card:active{transform:none!important}}
 [data-reduced=true] .menu-home .menu-card,[data-input-modality=keyboard] .menu-home .menu-card{transition:none}
 [data-reduced=true] .menu-home .menu-card:active,[data-input-modality=keyboard] .menu-home .menu-card:active{transform:none!important}
+
+.menu-home .menu-upcoming{display:flex;align-items:center;gap:14px;width:100%;min-width:0;margin-top:14px;padding:11px 12px;border:1px solid #ffffff12;border-radius:10px;background:linear-gradient(#191c21,#121519);box-shadow:0 1px 0 #ffffff04 inset;text-align:left;color:#d7dce5;cursor:pointer}
+.menu-upcoming-copy{display:block;flex:1;min-width:0}
+.menu-upcoming-label{display:block;margin-bottom:5px;color:#929ba9;font-size:8px;font-weight:550;letter-spacing:.055em}
+.menu-upcoming[data-ongoing] .menu-upcoming-label{color:#a9c59f}
+.menu-upcoming strong{display:-webkit-box;max-width:100%;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;font-size:12px;font-weight:550;line-height:1.4;color:#e1e5ed}
+.menu-upcoming-time{display:block;margin-top:5px;font-size:10px;line-height:1.4;color:#8f9aa9;font-variant-numeric:tabular-nums}
+.menu-upcoming>svg{flex-shrink:0;color:#8f99a7}
+.menu-upcoming:focus-visible{outline:2px solid #b7c8ff;outline-offset:2px}
+@media(hover:hover) and (pointer:fine){.menu-home .menu-upcoming:hover{border-color:#ffffff24;background:linear-gradient(#1e2228,#171b20)}}

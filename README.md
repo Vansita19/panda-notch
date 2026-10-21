@@ -58,6 +58,8 @@ No personal tasks, calendar exports, or saved application data are included. See
 ### Menu
 Panda starts at **Menu** on first use, with cards for **Task Planning**, **Focus**, **All links**, **Ideas**, and **Reminders**. It remembers the last feature you used and returns there when reopened, including after relaunching the app. Settings preserves that destination. Scroll the Menu sideways to reach every card, or use Tab and the arrow keys. Cards are 200 pixels square at Retina resolution, with proportionally scaled artwork, icons, and labels. Overflow edges fade softly. While hovered, each card has its own slow, continuous motion: drifting task glows, a breathing Focus glow, moving link bars at their original brightness, an Ideas glow, and reminder waves expanding and fading outward. Leaving eases back to the original artwork over one second, then stops. Keyboard input, reduced-motion preferences, or dismissal stop decorative motion. Tabs appear after entering a feature and remain available when returning to Menu.
 
+The next calendar event appears below the Menu cards with its title and time. An event already underway is labeled Now. Clicking the card opens Mac Calendar; no card is shown when there are no remaining events.
+
 Task Plan, All links, Ideas, and Reminders fit their content when opened, up to the available screen height. Longer content scrolls. Manually resizing the current view keeps that height until the next view entry; the saved width remains available.
 
 ### Expand the task calendar
