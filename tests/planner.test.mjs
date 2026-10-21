@@ -10,6 +10,23 @@ test('acknowledged writes link a task, backup preserves link, unlink only clears
 
 const MINUTE=60000,HOUR=60*MINUTE;
 const workday={start:7*HOUR,end:23*HOUR};
+test('moving a block preserves its duration and the grabbed pointer offset',async()=>{
+ const {moveRange}=await import('../src/planner.mjs');
+ assert.equal(typeof moveRange,'function');
+ assert.deepEqual(moveRange(9*HOUR,11*HOUR,74*MINUTE,workday),{start:10*HOUR+15*MINUTE,end:12*HOUR+15*MINUTE});
+ assert.deepEqual(moveRange(9*HOUR,11*HOUR,-29*MINUTE,workday),{start:8*HOUR+30*MINUTE,end:10*HOUR+30*MINUTE});
+ assert.deepEqual(moveRange(9*HOUR+7*MINUTE,10*HOUR+7*MINUTE,0,workday),{start:9*HOUR+7*MINUTE,end:10*HOUR+7*MINUTE});
+});
+test('moving a block clamps both day edges without shrinking it',async()=>{
+ const {moveRange}=await import('../src/planner.mjs');
+ assert.equal(typeof moveRange,'function');
+ assert.deepEqual(moveRange(9*HOUR,11*HOUR,-10*HOUR,workday),{start:7*HOUR,end:9*HOUR});
+ assert.deepEqual(moveRange(9*HOUR,11*HOUR,30*HOUR,workday),{start:21*HOUR,end:23*HOUR});
+ assert.deepEqual(moveRange(workday.start,workday.end,2*HOUR,workday),workday);
+ assert.equal(moveRange(0,24*HOUR,2*HOUR,workday),null);
+ assert.equal(moveRange(9*HOUR,8*HOUR,0,workday),null);
+ assert.equal(moveRange(9*HOUR,10*HOUR,NaN,workday),null);
+});
 test('pointer time follows quarter-hour boundaries, including both workday edges',()=>{
  assert.equal(timeAt(-20,640,workday),workday.start);
  assert.equal(timeAt(640,640,workday),workday.end);

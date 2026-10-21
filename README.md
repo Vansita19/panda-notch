@@ -15,7 +15,7 @@ Useful reminders disappear when they live in another tab. Panda brings the next 
 - Tasks with completion progress beside the panda and a panel that grows with the list.
 - A focus timer, short and long breaks, and optional sound.
 - Calendar access through macOS EventKit, requested explicitly by the app.
-- Notes, a brain dump, and configurable reminders.
+- Ideas, saved links and files, and configurable reminders.
 - A native macOS shell with a React interface and animated interactions.
 
 ## Try the interface
@@ -48,17 +48,21 @@ The script creates `Panda.app` next to the repository folder. This is a developm
 - `native/`: Swift AppKit/WebKit shell and EventKit calendar bridge.
 - `tests/`: state, task-progress, and motion checks.
 - `assets/audio/`: interface sounds.
+- `assets/menu/`: the local Figma artwork used by the Menu cards.
 - `scripts/`: frontend and native build tooling.
 
 No personal tasks, calendar exports, or saved application data are included. See `THIRD-PARTY-NOTICES.md` and `licenses/` for dependency and component credits.
 
 ## Everyday tools
 
-### Expand the task calendar
-In **Tasks**, add your to-dos, then choose **Expand** to reveal today’s calendar beside the same list. Click a task’s dot, move to the calendar, and drag from the start time to the end time. You can drag in either direction; intervals use 15-minute steps. Press Escape to cancel before saving. Connected tasks are saved in the selected writable Mac calendar. Saved tasks remain connected to their calendar blocks by gray threads; hovering or interacting highlights the connection in blue. Choose **Compact** to return to the checklist with scheduled times beside task names. Click a scheduled block to change its time or color, or unlink its event while keeping the task.
+### Menu
+Panda opens to **Menu**, with cards for **Task Planning**, **Focus**, **All links**, **Ideas**, and **Reminders**. Scroll sideways to reach every card, or use Tab and the arrow keys. Overflow edges fade softly, and each card has a brief individual hover response that respects reduced motion. The Task Planning card opens the **Task Plan** tab. Tabs appear after entering a feature and remain available when returning to Menu; a fresh opening starts with the compact menu alone.
 
-### Pins
-The Pins tab stores reusable web links and local file copies. Add a link and use Copy; add a file with the Mac file picker and drag its row into a compatible app or upload field. The file Copy button also supports pasting into Finder and other file-aware apps. Files remain on this Mac in `Application Support/Panda/Pins`; originals are never modified. Pin the file again after updating your résumé. Files are limited to 50 MB each and there are at most 200 pins. Removing a pin hides it and offers Undo; its local copy remains available for recovery. JSON exports include pin metadata, not attachment contents, so keep the Pins folder with a full backup. File selection and native file dragging are available in the Mac app; the browser preview supports links.
+### Expand the task calendar
+In **Task Plan**, add your to-dos, then choose **Expand** or click a task to reveal today’s calendar beside the same list. Use the pencil to edit a task’s name. Click a task’s dot, move to the calendar, and drag from the start time to the end time. You can drag in either direction; intervals use 15-minute steps. Press Escape to cancel before saving. Connected tasks are saved in the selected writable Mac calendar. Saved tasks remain connected to their calendar blocks by gray threads; hovering or interacting highlights the connection in blue. Drag a block’s body to move it while keeping its duration, or its bottom edge to resize it. Choose **Compact** to return to the checklist with scheduled times beside task names. Click a scheduled block to change its time or color, or unlink its event while keeping the task.
+
+### All links
+The All links tab stores reusable web links and local file copies. Add a link and use Copy; add a file with the Mac file picker and drag its row into a compatible app or upload field. The file Copy button also supports pasting into Finder and other file-aware apps. Files remain on this Mac in `Application Support/Panda/Pins`; originals are never modified. Pin the file again after updating your résumé. Files are limited to 50 MB each and there are at most 200 pins. Removing a pin hides it and offers Undo; its local copy remains available for recovery. JSON exports include pin metadata, not attachment contents, so keep the Pins folder with a full backup. File selection and native file dragging are available in the Mac app; the browser preview supports links.
 
 ### Copy text from screen
 Click the cursor beside the notch menu, or the menu-bar paw → **Copy text from screen…**. Drag a rectangle around the text; Escape cancels. Panda invokes macOS interactive screenshot selection directly, without the redundant full-screen permission preflight that could reject an enabled permission. macOS still controls capture access. Apple Vision recognizes the selected text locally and copies it for Command-V. No account or upload is involved; the temporary image is deleted after processing. Cancel leaves the clipboard unchanged. No window-sharing picker, continuous recording, or capture history is used.

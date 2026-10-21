@@ -64,6 +64,8 @@
 .planner-thread g circle{stroke:#62a8ff}
 .planner-event{transition:background-color 160ms ease,border-color 160ms ease,opacity 160ms ease}
 .planner-event>button:first-child{transition:opacity 160ms ease}
+.planner-event.linked-event>button:first-child{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.planner-event[data-phase=moving]>button:first-child{cursor:grabbing}
 .planner-event[data-phase=selecting]{border:1px dashed #83b9ff;background:#62a8ff0d}
 .planner-event[data-phase=selecting]>button:first-child{opacity:0;pointer-events:none}
 .planner-event.is-connection-active{border-color:#62a8ff}

@@ -356,3 +356,18 @@ body{position:fixed;inset:0}
 @keyframes panda-music-bars{0%{transform:scaleY(.25)}40%{transform:scaleY(.8)}100%{transform:scaleY(.45)}}
 [data-reduced=true] .music-bars i{animation:none!important}
 @media(prefers-reduced-motion:reduce){.music-bars i{animation:none!important}}
+
+/* Figma 225:2 is authored at twice the app's point size. */
+.panel-heading .panel-date{display:flex;align-items:baseline;gap:3px;min-width:0;font-size:10px;letter-spacing:.1172px;line-height:1.2;color:#9da4ad}
+.panel-date>strong{font-size:16px;line-height:1.2;font-weight:510;letter-spacing:.1172px;color:#fff}
+.panel-date>span{white-space:nowrap}
+.panda-tabs{width:100%;flex-shrink:0;margin-bottom:9px}
+.app-shell[data-view=today].is-open:not([data-resizing]) .notch-layout,
+.app-shell[data-view=today][data-sized=true][data-height-view=today].is-open:not([data-resizing]) .notch-layout{height:auto;max-height:var(--screen-height)}
+.app-shell[data-view=today].is-open:not([data-resizing]) .view-scroll{flex:0 1 auto;overflow-y:auto;overflow-x:hidden}
+.app-shell.is-menu-home .open-content{padding-bottom:27px}
+
+/* Compact reverses the painted wide composition before changing its layout. */
+.app-shell[data-planner-contracting=true][data-view=tasks] .view-scroll{overflow:visible}
+.app-shell[data-planner-contracting=true] .task-workspace{width:calc(var(--planner-layout-width) - 36px);height:var(--planner-compact-content-height);min-height:0;overflow:visible}
+.app-shell[data-planner-contracting=true] .planner-day{pointer-events:none}

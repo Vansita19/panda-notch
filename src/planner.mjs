@@ -31,6 +31,12 @@ export function selectionRange(anchor,current,range){
  if(end-start<minimum){end=Math.min(range.end,start+minimum);start=Math.max(range.start,end-minimum);}
  return {start,end};
 }
+// Move by pointer delta, so grabbing the middle never jumps the block to the cursor.
+export function moveRange(start,end,delta,range){
+ if(!validSlot(start,end)||!Number.isFinite(delta)||!usableRange(range)||end-start>range.end-range.start)return null;
+ const duration=end-start,next=clamp(start+Math.round(delta/QUARTER_HOUR)*QUARTER_HOUR,range.start,range.end-duration);
+ return {start:next,end:next+duration};
+}
 export function validSlot(start,end){return Number.isFinite(start)&&Number.isFinite(end)&&end>start&&end-start<=86400000;}
 // Keep one rendered identity from the first dragged selection through Calendar's acknowledgement.
 export function mergePlannerEvents(events=[],tasks=[],preview=null){

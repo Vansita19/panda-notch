@@ -1,0 +1,55 @@
+.menu-home{width:100%;min-width:0}
+.menu-home-scroll{--menu-fade-start:0px;--menu-fade-end:0px;position:relative;display:flex;align-items:center;gap:8px;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;touch-action:pan-x;scroll-behavior:auto;padding:0;-webkit-mask-image:linear-gradient(to right,transparent,#000 var(--menu-fade-start),#000 calc(100% - var(--menu-fade-end)),transparent);mask-image:linear-gradient(to right,transparent,#000 var(--menu-fade-start),#000 calc(100% - var(--menu-fade-end)),transparent)}
+.menu-home-scroll[data-fade-start]{--menu-fade-start:22px}
+.menu-home-scroll[data-fade-end]{--menu-fade-end:22px}
+.menu-home-scroll::-webkit-scrollbar{display:none}
+.menu-home .menu-card{position:relative;display:block;flex:0 0 80px;width:80px;min-width:80px;height:80px;min-height:80px;padding:0;margin:0;border:0;border-radius:10px;background:transparent;box-shadow:none;overflow:hidden;cursor:pointer;isolation:isolate;transition:transform 120ms cubic-bezier(.23,1,.32,1);-webkit-tap-highlight-color:transparent}
+.menu-home .menu-card:active{transform:scale(.985)}
+.menu-home .menu-card:focus-visible{outline:2px solid #b7c8ff;outline-offset:-2px}
+.menu-card-art{position:absolute;display:block;left:0;top:0;width:160px;height:160px;box-sizing:border-box;border:0;border-radius:20px;overflow:hidden;transform:scale(.5);transform-origin:top left;pointer-events:none;text-align:initial}
+/* Three Figma stroke paints, ordered front to back, clipped to a 1px inside ring. */
+.menu-card-art::after{content:'';position:absolute;inset:0;box-sizing:border-box;padding:1px;border-radius:inherit;background:linear-gradient(137.235deg,rgba(255,255,255,.5) 0%,rgba(255,255,255,0) 52.11%),linear-gradient(321.56deg,rgba(255,255,255,.7) 0%,rgba(255,255,255,0) 45.437%),var(--menu-stroke-tint);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.menu-card-art .menu-layer{position:absolute;display:block;max-width:none;transition:transform 220ms cubic-bezier(.23,1,.32,1),opacity 180ms ease}
+.menu-card-art-tasks{background:#60120d;--menu-stroke-tint:rgba(255,102,101,.2)}
+.menu-card-art-focus{background:linear-gradient(180deg,#2c2f57 0%,#6a61e0 100%);--menu-stroke-tint:rgba(163,141,255,.2)}
+.menu-card-art-pins{background:#151712;--menu-stroke-tint:rgba(78,135,46,.2)}
+.menu-card-art-dump{background:#133575;--menu-stroke-tint:rgba(81,116,255,.2)}
+.menu-card-art-reminders{background:linear-gradient(180deg,#0d8373 0%,#065a4f 100%);--menu-stroke-tint:rgba(163,141,255,.2)}
+.menu-card-art .menu-card-label{position:absolute;top:121px;left:50%;display:block;width:max-content;max-width:none;margin:0;padding:0;transform:translateX(-50%);font-family:-apple-system,BlinkMacSystemFont,'SF Pro',sans-serif;font-size:20px;font-weight:500;line-height:normal;letter-spacing:.2344px;color:#fff;text-align:center;white-space:nowrap}
+.menu-card-art-focus .menu-card-label{left:117px}
+.menu-card-art-pins .menu-card-label{left:106.5px}
+.menu-card-art-dump .menu-card-label{left:120px}
+.menu-card-art-reminders .menu-card-label{left:90px}
+.menu-card-art .menu-card-icon{left:17px;top:17px}
+.menu-task-glow-one{left:-11px;top:-3px;mix-blend-mode:plus-lighter}
+.menu-task-glow-two{left:15px;top:8px;mix-blend-mode:plus-lighter}
+.menu-task-glow-three{left:33px;top:-11px;mix-blend-mode:plus-lighter}
+.menu-focus-glow{left:-34.2px;top:-14.2px;mix-blend-mode:color-dodge}
+.menu-icon-clip{position:absolute;left:17px;top:17px;width:36px;height:36px;overflow:hidden}
+.menu-focus-icon{left:2.2464px;top:1.1268px}
+.menu-links-glow{left:-64px;top:-33px}
+.menu-links-mask{left:-3px;top:-1px}
+.menu-ideas-glow{left:-64px;top:-33px}
+.menu-ideas-icon{left:3.127px;top:2.4396px}
+.menu-reminders-ring-one{left:43.01px;top:68.01px}
+.menu-reminders-ring-two{left:27.3px;top:52.3px}
+.menu-reminders-ring-three{left:11.6px;top:36.6px}
+/* Each illustration moves once toward its own hover pose; there are no idle timelines. */
+@media(hover:hover) and (pointer:fine){
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-task-glow-one{transform:translate(-2px,-3px)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-task-glow-two{transform:translate(3px,1px);opacity:.94}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-task-glow-three{transform:translate(1px,-2px)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-focus-glow{transform:translateY(-3px) scale(1.015)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-links-glow{transform:translate(2px,-2px)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-links-mask{transform:translate(-2px,1px)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card-art-pins .menu-card-icon{transform-origin:center}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-card-art-pins .menu-card-icon{transform:rotate(-4deg)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-ideas-glow{transform:translateY(-2px)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-ideas-icon{transform:rotate(3deg)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-reminders-ring-one{transform:translateY(-2px) scale(1.012)}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-reminders-ring-two{transform:translateY(-1.3px) scale(1.007);opacity:.95}
+ :root:not([data-reduced=true]):not([data-input-modality=keyboard]) .menu-card:hover .menu-reminders-ring-three{transform:translateY(-.7px) scale(1.003)}
+}
+@media(prefers-reduced-motion:reduce){.menu-home .menu-card,.menu-home .menu-layer{transition:none}.menu-home .menu-card:active,.menu-home .menu-layer{transform:none!important}}
+[data-reduced=true] .menu-home .menu-card,[data-reduced=true] .menu-home .menu-layer,[data-input-modality=keyboard] .menu-home .menu-card,[data-input-modality=keyboard] .menu-home .menu-layer{transition:none}
+[data-reduced=true] .menu-home .menu-card:active,[data-reduced=true] .menu-home .menu-layer,[data-input-modality=keyboard] .menu-home .menu-card:active,[data-input-modality=keyboard] .menu-home .menu-layer{transform:none!important}
