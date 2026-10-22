@@ -68,7 +68,7 @@
 [data-reduced=true] .menu-home .menu-card:active,[data-input-modality=keyboard] .menu-home .menu-card:active{transform:none!important}
 
 .menu-upcoming-section{margin-top:17px;padding-top:15px;border-top:1px solid #ffffff12}
-.menu-calendar-widget{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;align-items:start;padding:9px;border:1px solid #ffffff0c;border-radius:23px;background:linear-gradient(130deg,#15191f,#1b2435);box-shadow:0 1px 0 #ffffff03 inset}
+.menu-calendar-widget{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;align-items:start;padding:9px;border:1px solid #ffffff0c;border-radius:23px;background:#222426;box-shadow:0 1px 0 #ffffff03 inset}
 /* The reference's 400px tile and shadow values are scaled to 100 native points. */
 .menu-calendar-date{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:space-between;width:100px;height:100px;min-width:0;padding:10px;border-radius:20px;overflow:hidden;text-align:left;background:linear-gradient(#0a0909,#09101f);box-shadow:inset 0 1.5px 1.5px -.5px #2365ff26,inset 0 -10px 7.5px -2px #6694ff80,inset 0 -20px 15px -7.5px #144ccd,0 7px 12px -5px #000b;color:#f5f7fc}
 .menu-calendar-date:after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 -5px 5px -1.5px #ffffff66;mix-blend-mode:plus-lighter;pointer-events:none;z-index:-1}
@@ -77,7 +77,7 @@
 .menu-calendar-date b{font-weight:550}
 .menu-calendar-agenda{min-width:0;min-height:100px;padding:2px 2px 2px 12px;border-left:1px solid #ffffff0d}
 .menu-calendar-agenda h2{margin:0 0 7px;font-size:9px;line-height:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:#c1c9d6}
-.menu-calendar-agenda ul{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.menu-calendar-agenda ul{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
 .menu-calendar-agenda li{min-width:0}
 .menu-upcoming-event{display:flex;align-items:stretch;gap:7px;min-width:0;width:100%;min-height:24px;padding:0;text-align:left;border-radius:3px}
 .menu-upcoming-marker{flex:0 0 2px;border-radius:1px;background:var(--upcoming-accent,#62a8ff)}
@@ -85,5 +85,9 @@
 .menu-upcoming-copy strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:500;line-height:1.3;color:#e6e9f0}
 .menu-upcoming-time{display:block;margin-top:1px;font-size:9px;line-height:1.3;color:#939eaf;font-variant-numeric:tabular-nums}
 .menu-upcoming-time b{font-weight:500;color:#b6cbaf}
+.menu-upcoming-event.is-secondary .menu-upcoming-marker{background:#626a72}
+.menu-upcoming-event.is-secondary .menu-upcoming-copy strong{color:#92999f}
+.menu-upcoming-event.is-secondary .menu-upcoming-time{color:#737e88}
+.menu-upcoming-event.is-secondary .menu-upcoming-time b{color:#8b9795}
 .menu-calendar-date:focus-visible,.menu-upcoming-event:focus-visible{outline:2px solid #b7c8ff;outline-offset:2px}
-@media(hover:hover) and (pointer:fine){.menu-upcoming-event:hover .menu-upcoming-copy strong{color:#fff}.menu-calendar-date:hover{filter:brightness(1.06)}}
+@media(hover:hover) and (pointer:fine){.menu-upcoming-event:hover .menu-upcoming-copy strong{color:#fff}.menu-upcoming-event.is-secondary:hover .menu-upcoming-copy strong{color:#b0b8bf}.menu-calendar-date:hover{filter:brightness(1.06)}}

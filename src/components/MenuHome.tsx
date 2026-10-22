@@ -87,9 +87,9 @@ export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor}:MenuH
   const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:Math.max(0,Math.min(buttons.length-1,index+(event.key==='ArrowRight'?1:-1)));
   buttons[next]?.focus({preventScroll:true});if(buttons[next])reveal(buttons[next]);
  };
- const upcoming=deriveMenuUpcoming(events,now);
+ const upcoming=deriveMenuUpcoming(events,now,{limit:2});
  const date=upcoming?new Date(upcoming.date):null;
- const eventTime=(event:MenuEvent)=>event.allDay?'All day':`${new Date(event.start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} – ${new Date(event.end).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
+ const eventTime=(event:MenuEvent)=>event.allDay?'All day':`${new Date(event.start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true})} – ${new Date(event.end).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true})}`;
  const accents=['#62a8ff','#b698ff','#34c4d8'];
  return <nav className="menu-home" aria-label="Panda tools">
   <div className="menu-home-scroll" ref={viewport} onKeyDown={navigateCards} onFocusCapture={event=>{if(event.target instanceof HTMLButtonElement)reveal(event.target);}}>
@@ -102,7 +102,7 @@ export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor}:MenuH
      <span><b>{date.toLocaleDateString('en-GB',{weekday:'long'})}</b><span>{upcoming.eventCount} {upcoming.eventCount===1?'event':'events'}</span></span>
     </button>
     <div className="menu-calendar-agenda"><h2>Upcoming</h2><ul>
-     {upcoming.events.map((event:MenuEvent,index:number)=>{const ongoing=event.start<=now&&now<event.end,color=eventColor?.(event)||event.color;return <li key={event.id}><button type="button" tabIndex={0} className="menu-upcoming-event" onClick={onOpenCalendar} aria-label={`Open Calendar: ${event.title}, ${ongoing?'now, ':''}${eventTime(event)}`} style={{'--upcoming-accent':color&&/^#[\da-f]{6}$/i.test(color)?color:accents[index%accents.length]} as React.CSSProperties}>
+     {upcoming.events.map((event:MenuEvent,index:number)=>{const ongoing=event.start<=now&&now<event.end,color=eventColor?.(event)||event.color;return <li key={event.id}><button type="button" tabIndex={0} className={`menu-upcoming-event ${index===0?'is-primary':'is-secondary'}`} onClick={onOpenCalendar} aria-label={`Open Calendar: ${event.title}, ${ongoing?'now, ':''}${eventTime(event)}`} style={{'--upcoming-accent':color&&/^#[\da-f]{6}$/i.test(color)?color:accents[index%accents.length]} as React.CSSProperties}>
       <span className="menu-upcoming-marker" aria-hidden="true"/><span className="menu-upcoming-copy"><strong title={event.title}>{event.title}</strong><span className="menu-upcoming-time">{ongoing&&<b>Now · </b>}{eventTime(event)}</span></span>
      </button></li>;})}
     </ul></div>

@@ -7,16 +7,18 @@ export const priorityOptions=[
  {value:'high',label:'High',bars:3},
 ] as const;
 
-type PriorityProps={priority?:TaskPriorityValue|string|null;showLabel?:boolean;decorative?:boolean;className?:string};
+type PriorityProps={priority?:TaskPriorityValue|string|null;showLabel?:boolean;decorative?:boolean;className?:string;onChange?:(priority:TaskPriorityValue)=>void};
 const optionFor=(priority:PriorityProps['priority'])=>priorityOptions.find(option=>option.value===priority)??priorityOptions[1];
 
 /** Priority remains readable without depending on color: one, two, or three lit bars. */
-export function TaskPriority({priority='medium',showLabel=false,decorative=false,className=''}:PriorityProps){
- const option=optionFor(priority);
- return <span className={`task-priority ${className}`} data-priority={option.value} role={decorative?undefined:'img'} aria-label={decorative?undefined:`${option.label} priority`} aria-hidden={decorative||undefined} title={decorative?undefined:`${option.label} priority`}>
+export function TaskPriority({priority='medium',showLabel=false,decorative=false,className='',onChange}:PriorityProps){
+ const option=optionFor(priority),next=priorityOptions[(priorityOptions.indexOf(option)+1)%priorityOptions.length];
+ const content=<>
   <span className="task-priority-bars" aria-hidden="true">{[0,1,2].map(index=><i key={index} data-lit={index<option.bars}/>)}</span>
   {showLabel&&<span className="task-priority-label">{option.label}</span>}
- </span>;
+ </>;
+ if(onChange)return <button type="button" tabIndex={0} className={`task-priority task-priority-control ${className}`} data-priority={option.value} aria-label={`${option.label} priority. Change to ${next.label.toLowerCase()} priority`} title={`${option.label} priority · Click for ${next.label.toLowerCase()}`} onClick={event=>{event.stopPropagation();onChange(next.value);}}>{content}</button>;
+ return <span className={`task-priority ${className}`} data-priority={option.value} role={decorative?undefined:'img'} aria-label={decorative?undefined:`${option.label} priority`} aria-hidden={decorative||undefined} title={decorative?undefined:`${option.label} priority`}>{content}</span>;
 }
 
 type PriorityChoicesProps={priority?:TaskPriorityValue|string|null;onChange:(priority:TaskPriorityValue)=>void;disabled?:boolean;label?:string};
