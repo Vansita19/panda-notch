@@ -69,7 +69,7 @@ You can also start on the calendar: hover empty space for a plus, drag a time sp
 
 Expand and Compact use one interruptible transition: the calendar fades and slides right on closing while the checklist returns to the center. Its scroll viewport stays intact until the fade ends, including when a smaller display limits the expanded width.
 
-The expanded planner gives equal space to tasks and calendar. Task names stay left; scheduled times and priority signals sit at the right edge, then slide left to reveal edit and delete controls on hover or keyboard focus. Long names and metadata wrap when needed.
+The expanded planner gives equal space to tasks and calendar. Task names stay left and priority signals stay at the right edge. Scheduled times appear beside tasks only in Compact; the expanded calendar already shows each event’s time. Metadata slides left to reveal edit and delete controls on hover or keyboard focus. Long names and metadata wrap when needed.
 
 The right calendar scrolls independently of the left checklist, with the hour-range controls kept in place. Long checklists can scroll separately too. Threads follow visible blocks and disappear when either endpoint is outside its column; scrolling does not rerender the task list. Calendar hour labels and range controls use a 12-hour AM/PM clock. Click a task's priority signal to cycle Low (green), Medium (yellow), and High (red) without opening its calendar.
 
