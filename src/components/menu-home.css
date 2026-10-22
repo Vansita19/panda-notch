@@ -13,7 +13,7 @@
 .menu-card-art-tasks{background:#60120d;--menu-stroke-tint:rgba(255,102,101,.2)}
 .menu-card-art-focus{background:linear-gradient(180deg,#2c2f57 0%,#6a61e0 100%);--menu-stroke-tint:rgba(163,141,255,.2)}
 .menu-card-art-pins{background:#151712;--menu-stroke-tint:rgba(78,135,46,.2)}
-.menu-card-art-dump{background:#133575;--menu-stroke-tint:rgba(81,116,255,.2)}
+.menu-card-art-dump{background:radial-gradient(ellipse at 58% 38%,#511321 0%,#2e0712 48%,#160309 100%);--menu-stroke-tint:rgba(255,133,158,.2)}
 .menu-card-art-reminders{background:linear-gradient(180deg,#0d8373 0%,#065a4f 100%);--menu-stroke-tint:rgba(163,141,255,.2)}
 .menu-card-art .menu-card-label{position:absolute;top:121px;left:50%;display:block;width:max-content;max-width:none;margin:0;padding:0;transform:translateX(-50%);font-family:-apple-system,BlinkMacSystemFont,'SF Pro',sans-serif;font-size:20px;font-weight:500;line-height:normal;letter-spacing:.2344px;color:#fff;text-align:center;white-space:nowrap;z-index:2}
 .menu-card-art-focus .menu-card-label{left:117px}
@@ -29,11 +29,16 @@
 .menu-focus-icon{left:2.2464px;top:1.1268px}
 .menu-links-glow{left:-64px;top:-33px}
 .menu-links-mask{left:-3px;top:-1px;visibility:hidden}
-.menu-ideas-glow{left:-64px;top:-33px}
+.menu-ideas-aura{left:9px;top:12px;width:148px;height:132px;opacity:.68;transform:translateY(0px) scale(1);filter:blur(8px);mix-blend-mode:screen;background:radial-gradient(ellipse at 57% 48%,rgba(255,100,134,.56) 0%,rgba(225,48,92,.27) 38%,rgba(177,25,63,.09) 57%,transparent 74%)}
+.menu-ideas-heart{left:27px;top:22px;width:126px;height:108px;opacity:.92;transform:translateY(0px) scale(1);filter:blur(2.4px);mix-blend-mode:screen}
+.menu-ideas-heart::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 33% 18%,#ffd6df 0%,rgba(255,170,191,.92) 15%,transparent 45%),radial-gradient(ellipse at 77% 25%,#ff9eb7 0%,transparent 47%),linear-gradient(155deg,#ff7c9b 5%,#f73f64 55%,#d8254b 100%);-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 112'%3E%3Cpath fill='white' d='M64 110C47 95 8 71 4 44C0 19 15 4 34 4C47 4 57 10 64 23C71 10 81 4 94 4C113 4 128 19 124 44C120 71 81 95 64 110Z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 112'%3E%3Cpath fill='white' d='M64 110C47 95 8 71 4 44C0 19 15 4 34 4C47 4 57 10 64 23C71 10 81 4 94 4C113 4 128 19 124 44C120 71 81 95 64 110Z'/%3E%3C/svg%3E");-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .menu-ideas-icon{left:3.127px;top:2.4396px}
 .menu-reminders-ring-one{left:43.01px;top:68.01px}
 .menu-reminders-ring-two{left:27.3px;top:52.3px}
 .menu-reminders-ring-three{left:11.6px;top:36.6px}
+.menu-reminders-rest{left:0;top:0;width:160px;height:160px;opacity:1}
+/* Separate wavefronts can finish outward; the original artwork never has to shrink back. */
+.menu-reminders-ripple{left:46.5px;top:71.5px;width:120px;height:120px;box-sizing:border-box;border:1.6px solid #addace;border-radius:50%;box-shadow:0 0 6px #9ee6d226;filter:blur(.8px);opacity:0;transform:scale(.3)}
 /* Each strip uses its original artwork pixels: motion never dims or swaps the link design. */
 .menu-links-wave{left:-3px;top:-1px;width:180.441px;height:173px;opacity:1;mask-image:none!important;-webkit-mask-image:none!important;overflow:hidden}
 .menu-wave-bar{position:absolute;top:0;width:6.51078px;height:173px;background-repeat:no-repeat;background-size:180.441px 173px;background-position:calc(var(--menu-bar-index,0) * -6.51078px) 0;transform-origin:50% 105px}

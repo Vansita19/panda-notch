@@ -97,63 +97,127 @@ test('keyboard input, hidden documents, and unmount release every animation and 
  assert.equal(document.count,0);assert.equal(media.count,0);assert.ok(observers.every(observer=>!observer.connected));
 }));
 
-test('the links waveform moves the original bars without dimming or crossfading its artwork',()=>environment(({button,Layer,active})=>{
+test('Focus has a visible breathing peak while preserving its two artwork layers',()=>environment(({button,active})=>{
+ const card=button('menu-focus-glow','menu-focus-core'),motion=createMenuCardMotion();motion.enter(card);
+ const loops=active();assert.equal(loops.length,2);
+ const scales=loops.flatMap(animation=>animation.frames.map(frame=>Number(/scale\(([^)]+)\)/.exec(frame.transform)?.[1]??1)));
+ assert.ok(Math.max(...scales)>=1.25);
+ const core=loops.find(animation=>animation.node.name==='menu-focus-core');assert.ok(Math.max(...core.frames.map(frame=>frame.opacity))>=.35);
+ motion.dispose();
+}));
+
+const scaleOf=transform=>Number(/scale\(([^)]+)\)/.exec(transform)?.[1]??1);
+const yOf=transform=>Number(/translateY\(([-\d.]+)px\)/.exec(transform)?.[1]??0);
+const poseOf=frame=>({transform:frame.transform,opacity:frame.opacity});
+const sampleY=(frames,phase)=>{
+ phase=(phase%1+1)%1;const stops=frames.map((frame,i)=>({frame,offset:frame.offset??i/(frames.length-1)}));
+ const index=Math.max(1,stops.findIndex(stop=>stop.offset>=phase)),a=stops[index-1],b=stops[index];
+ const fraction=(phase-a.offset)/(b.offset-a.offset||1);return yOf(a.frame.transform)+(yOf(b.frame.transform)-yOf(a.frame.transform))*fraction;
+};
+const reminderCard=(button,Layer)=>{const card=button('menu-reminders-rest');card.layers.push(...Array.from({length:3},()=>new Layer('menu-reminders-ripple',0,'scale(.3)')));return card;};
+
+test('Ideas heart and aura keep a gentle double breath in transform and opacity only',()=>environment(({button,Layer,active})=>{
+ const card=button();card.layers.push(new Layer('menu-ideas-heart',.92,'translateY(0px) scale(1)'),new Layer('menu-ideas-aura',.68,'translateY(0px) scale(1)'));
+ const motion=createMenuCardMotion();motion.enter(card);const loops=active();assert.equal(loops.length,2);
+ for(const animation of loops){
+  assert.equal(animation.options.iterations,Infinity);assert.ok(animation.options.duration>=3000);
+  assert.deepEqual(poseOf(animation.frames[0]),poseOf(animation.frames.at(-1)));
+  const scales=animation.frames.map(frame=>scaleOf(frame.transform));
+  const peaks=scales.filter((scale,i)=>i>0&&i<scales.length-1&&scale>scales[i-1]&&scale>scales[i+1]);assert.equal(peaks.length,2);
+  assert.ok(scales.every(scale=>scale>=1&&scale<=1.2));
+  for(const frame of animation.frames)assert.ok(Object.keys(frame).every(key=>['transform','opacity','easing','offset'].includes(key)));
+ }
+ motion.leave(card);assert.equal(active().filter(animation=>animation.options.iterations===Infinity).length,0);motion.dispose();assert.equal(active().length,0);
+}));
+
+test('Links joins each original art strip into a continuous left-to-right wave without dimming',()=>environment(({button,Layer,active})=>{
  const card=button('menu-links-glow','menu-links-mask','menu-links-wave');
  card.layers.push(...Array.from({length:25},()=>new Layer('menu-wave-bar')));
  const motion=createMenuCardMotion();motion.enter(card);
+ const joining=active().filter(animation=>animation.node.name==='menu-wave-bar');
+ assert.equal(joining.length,25);assert.ok(joining.every(animation=>animation.options.duration===400&&animation.options.iterations!==Infinity));
+ assert.ok(joining.every(animation=>animation.frames.every(frame=>frame.opacity===1)));
+ joining.forEach(animation=>animation.finish());
  const bars=active().filter(animation=>animation.node.name==='menu-wave-bar');
- assert.equal(bars.length,25);assert.ok(bars.every(animation=>animation.options.iterations===Infinity));
- assert.notEqual(bars[0].frames[1].transform,bars[1].frames[1].transform);
+ assert.equal(bars.length,25);assert.ok(bars.every(animation=>animation.options.iterations===Infinity&&animation.options.duration===4000));
+ bars.forEach((animation,i)=>{
+  assert.deepEqual(poseOf(joining[i].frames.at(-1)),poseOf(animation.frames[0]));
+  assert.deepEqual(poseOf(animation.frames[0]),poseOf(animation.frames.at(-1)));
+  assert.ok(Math.max(...animation.frames.map(frame=>Math.abs(yOf(frame.transform))))>=8);
+  const scales=animation.frames.map(frame=>Number(/scaleY\(([^)]+)\)/.exec(frame.transform)?.[1]??1));
+  assert.ok(scales.every(scale=>scale>=.819&&scale<=1.181));assert.ok(Math.min(...scales)<=.84&&Math.max(...scales)>=1.16);
+ });
+ assert.ok(bars.some((animation,i)=>i>0&&animation.frames[0].transform!==bars[i-1].frames[0].transform));
+ const travelError=lag=>bars.slice(1).reduce((sum,animation,i)=>sum+Array.from({length:20},(_,t)=>{const phase=t/20;return (sampleY(animation.frames,phase+lag)-sampleY(bars[i].frames,phase))**2;}).reduce((a,b)=>a+b,0),0);
+ const lags=Array.from({length:16},(_,i)=>(i+1)/100);
+ assert.ok(Math.min(...lags.map(travelError))<Math.min(...lags.map(lag=>travelError(-lag)))*.7,'A crest must reach each right neighbor after its left neighbor');
  assert.equal(card.layers.find(layer=>layer.name==='menu-links-mask').animations.length,0);
  assert.equal(card.layers.find(layer=>layer.name==='menu-links-wave').animations.length,0);
  assert.ok(active().every(animation=>animation.frames.every(frame=>frame.opacity===1)));
- assert.ok(bars.every(animation=>animation.frames.slice(1,-1).every(frame=>Number(/scaleY\(([^)]+)\)/.exec(frame.transform)[1])>=.97)));
- for(const animation of active())for(const frame of animation.frames)assert.ok(Object.keys(frame).every(key=>['transform','opacity','easing'].includes(key)));
+ for(const animation of active())for(const frame of animation.frames)assert.ok(Object.keys(frame).every(key=>['transform','opacity','easing','offset'].includes(key)));
  motion.leave(card);assert.equal(active().filter(animation=>animation.options.iterations===Infinity).length,0);
  motion.dispose();assert.equal(active().length,0);
 }));
 
-
-test('reminder rings travel outward, fade before wrapping, and repeat with staggered phases',()=>environment(({button,active})=>{
- const card=button('menu-reminders-ring-one','menu-reminders-ring-two','menu-reminders-ring-three'),motion=createMenuCardMotion();motion.enter(card);
- const joining=active();assert.equal(joining.length,3);
- assert.ok(joining.every(animation=>animation.frames[0].transform==='none'));
- assert.ok(joining.every(animation=>Number(/scale\(([^)]+)\)/.exec(animation.frames.at(-1).transform)[1])>=1));
- joining.forEach(animation=>animation.finish());
- const loops=active();assert.equal(loops.length,3);
- assert.ok(loops.every(animation=>animation.options.iterations===Infinity&&animation.options.easing==='linear'));
- assert.ok(Math.abs(loops[1].options.iterationStart-loops[0].options.iterationStart-1/3)<1e-6);
- assert.ok(Math.abs(loops[2].options.iterationStart-loops[1].options.iterationStart-1/3)<1e-6);
+test('fresh reminder overlay loops grow monotonically and fade before wrapping',()=>environment(({button,Layer,active})=>{
+ const card=reminderCard(button,Layer),motion=createMenuCardMotion();motion.enter(card);
+ const loops=active().filter(animation=>animation.node.name==='menu-reminders-ripple');assert.equal(loops.length,3);
  for(const animation of loops){
-  const scales=animation.frames.map(frame=>Number(/scale\(([^)]+)\)/.exec(frame.transform)[1]));
-  assert.ok(scales.every((scale,index)=>index===0||scale>scales[index-1]));
+  const scales=animation.frames.map(frame=>scaleOf(frame.transform));
+  assert.ok(scales.every((scale,index)=>index===0||scale>=scales[index-1]));
+  assert.equal(scales[0],.3);assert.equal(scales.at(-1),1.95);
   assert.equal(animation.frames[0].opacity,0);assert.equal(animation.frames.at(-1).opacity,0);
-  assert.ok(animation.frames.some(frame=>frame.opacity===1));
+  assert.equal(Math.max(...animation.frames.map(frame=>frame.opacity)),.55);
   for(const frame of animation.frames)assert.ok(Object.keys(frame).every(key=>['transform','opacity','offset'].includes(key)));
  }
  motion.dispose();assert.equal(active().length,0);
 }));
 
-test('leaving any ring phase eases to its exact artwork and cannot restart a stale wave',()=>environment(({button,active,animations})=>{
- const card=button('menu-reminders-ring-one','menu-reminders-ring-two','menu-reminders-ring-three'),motion=createMenuCardMotion();motion.enter(card);
- const entering=active();
- card.layers.forEach((layer,i)=>{layer.computed={transform:`matrix(${1.4+i*.2}, 0, 0, ${1.4+i*.2}, 0, 0)`,opacity:String(.8-i*.2)};});
+test('reminder exit samples its painted radius and fades farther outward while artwork returns',()=>environment(({button,Layer,active,animations})=>{
+ const card=reminderCard(button,Layer),motion=createMenuCardMotion();motion.enter(card);
+ const entering=active(),ripples=card.layers.slice(1);card.layers[0].computed.opacity='.32';
+ ripples.forEach((layer,i)=>{layer.computed={transform:`matrix(${.6+i*.4}, 0, 0, ${.6+i*.4}, 0, 0)`,opacity:String(.5-i*.1)};});
  motion.leave(card);const returns=active(),count=animations.length;
- assert.equal(returns.length,3);assert.ok(entering.every(animation=>animation.cancelled));
- assert.ok(returns.every(animation=>animation.options.duration>=900));
- returns.forEach((animation,i)=>{assert.deepEqual(animation.frames[0],{transform:card.layers[i].computed.transform,opacity:Number(card.layers[i].computed.opacity)});assert.deepEqual(animation.frames[1],{transform:'none',opacity:1});});
+ assert.equal(returns.length,4);assert.ok(entering.every(animation=>animation.cancelled));
+ const exiting=returns.filter(animation=>animation.node.name==='menu-reminders-ripple');assert.equal(exiting.length,3);
+ exiting.forEach((animation,i)=>{assert.deepEqual(poseOf(animation.frames[0]),{transform:ripples[i].computed.transform,opacity:Number(ripples[i].computed.opacity)});assert.equal(animation.options.duration,750);assert.ok(Math.abs(scaleOf(animation.frames.at(-1).transform)-(.6+i*.4+.18))<.001);assert.equal(animation.frames.at(-1).opacity,0);});
+ const resting=returns.find(animation=>animation.node.name==='menu-reminders-rest');assert.equal(resting.options.duration,1000);assert.equal(resting.frames.at(-1).opacity,1);
  entering.forEach(animation=>animation.finish());assert.equal(animations.length,count);
  motion.leave(card);assert.equal(animations.length,count);
  returns.forEach(animation=>animation.finish());assert.equal(active().length,0);
  motion.dispose();
 }));
 
-test('rapid reminder reentry joins outside the painted radius and releases every obsolete animation',()=>environment(({button,active,animations})=>{
- const card=button('menu-reminders-ring-one'),motion=createMenuCardMotion();motion.enter(card);
- card.layers[0].computed={transform:'matrix(2.2, 0, 0, 2.2, 0, 0)',opacity:'.4'};motion.leave(card);const returning=active()[0];
- motion.enter(card);const joining=active()[0];assert.equal(returning.cancelled,true);
- assert.deepEqual(joining.frames[0],{transform:'matrix(2.2, 0, 0, 2.2, 0, 0)',opacity:.4});
- assert.ok(Number(/scale\(([^)]+)\)/.exec(joining.frames.at(-1).transform)[1])>=2.2);
- returning.finish();joining.finish();assert.equal(active().length,1);assert.equal(active()[0].options.iterations,Infinity);
+test('rapid reminder reentry finishes its visible ripple outward before starting a fresh loop',()=>environment(({button,Layer,active,animations})=>{
+ const card=reminderCard(button,Layer),layer=card.layers[1],motion=createMenuCardMotion();motion.enter(card);
+ layer.computed={transform:'matrix(.9, 0, 0, .9, 0, 0)',opacity:'.4'};motion.leave(card);const returning=layer.animations.at(-1);
+ layer.computed={transform:'matrix(1.1, 0, 0, 1.1, 0, 0)',opacity:'.25'};motion.enter(card);const joining=layer.animations.at(-1);
+ assert.equal(returning.cancelled,true);assert.notEqual(joining.options.iterations,Infinity);assert.equal(joining.options.duration,750);
+ assert.deepEqual(poseOf(joining.frames[0]),{transform:layer.computed.transform,opacity:.25});
+ assert.ok(scaleOf(joining.frames.at(-1).transform)>=1.28-.001);assert.equal(joining.frames.at(-1).opacity,0);
+ const before=animations.length;returning.finish();assert.equal(animations.length,before);joining.finish();
+ assert.equal(layer.animations.at(-1).options.iterations,Infinity);assert.equal(layer.animations.at(-1).options.duration,4800);
  motion.dispose();const count=animations.length;joining.finish();assert.equal(animations.length,count);assert.equal(active().length,0);
+}));
+
+test('reminders start three fresh overlay ripples immediately while dimming their resting artwork',()=>environment(({button,Layer,active})=>{
+ const card=button('menu-reminders-rest');
+ card.layers.push(...Array.from({length:3},()=>new Layer('menu-reminders-ripple',0,'scale(.3)')));
+ const motion=createMenuCardMotion();motion.enter(card);
+ const loops=active().filter(animation=>animation.node.name==='menu-reminders-ripple');
+ assert.equal(loops.length,3,'Three dedicated overlay ripples must start on hover');
+ assert.deepEqual(loops.map(animation=>animation.options.delay),[0,1600,3200]);
+ assert.ok(loops.every(animation=>animation.options.iterations===Infinity&&animation.options.duration===4800));
+ const resting=active().find(animation=>animation.node.name==='menu-reminders-rest');
+ assert.equal(resting?.frames.at(-1).opacity,.32);motion.dispose();
+}));
+
+test('keyboard and reduced motion cancel ripple joins without allowing stale loops to restart',()=>environment(({button,Layer,document,observers,animations,active})=>{
+ const card=reminderCard(button,Layer),layer=card.layers[1],motion=createMenuCardMotion();motion.enter(card);
+ layer.computed={transform:'matrix(1.1, 0, 0, 1.1, 0, 0)',opacity:'.3'};motion.leave(card);motion.enter(card);
+ const joining=layer.animations.at(-1);document.emit('keydown');assert.equal(active().length,0);
+ const stopped=animations.length;joining.finish();assert.equal(animations.length,stopped);
+ motion.enter(card);const nextJoin=layer.animations.at(-1);document.documentElement.dataset.reduced='true';observers[0].callback();assert.equal(active().length,0);
+ const reduced=animations.length;nextJoin.finish();assert.equal(animations.length,reduced);
+ motion.dispose();assert.equal(active().length,0);assert.equal(document.count,0);
 }));

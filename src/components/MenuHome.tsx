@@ -38,16 +38,20 @@ function CardArtwork({id,label}:{id:string;label:string}){
    <span className="menu-card-label">{label}</span>
   </>}
   {id==='dump'&&<>
-   {asset('imgVector5','menu-layer menu-ideas-glow')}
+   <span className="menu-layer menu-ideas-aura"/>
+   <span className="menu-layer menu-ideas-heart"/>
    <span className="menu-icon-clip">{asset('imgGroup2','menu-layer menu-ideas-icon')}</span>
    <span className="menu-card-label">{label}</span>
   </>}
   {id==='reminders'&&<>
    {asset('imgClarityBellOutlineBadged','menu-layer menu-card-icon')}
    <span className="menu-card-label">{label}</span>
-   {asset('imgEllipse5','menu-layer menu-reminders-ring-one')}
-   {asset('imgEllipse6','menu-layer menu-reminders-ring-two')}
-   {asset('imgEllipse7','menu-layer menu-reminders-ring-three')}
+   <span className="menu-layer menu-reminders-rest">
+    {asset('imgEllipse5','menu-layer menu-reminders-ring-one')}
+    {asset('imgEllipse6','menu-layer menu-reminders-ring-two')}
+    {asset('imgEllipse7','menu-layer menu-reminders-ring-three')}
+   </span>
+   {Array.from({length:3},(_,i)=><span key={i} className="menu-layer menu-reminders-ripple"/>)}
   </>}
  </span>;
 }
