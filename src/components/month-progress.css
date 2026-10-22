@@ -1,30 +1,30 @@
-.todo-period-switch{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid #ffffff06;border-radius:8px;background:#131719}
-.todo-period-switch>button{min-height:23px;padding:3px 8px;border-radius:5px;background:transparent;color:#7f898f;font-size:10px;line-height:16px;font-weight:500;white-space:nowrap}
-.todo-period-switch>button[aria-pressed=true]{background:#2a3033;box-shadow:0 1px 0 #ffffff07 inset;color:#e3e8e5}
-.todo-period-switch>button:focus-visible{outline:2px solid #a9bcfb;outline-offset:-2px}
+.todo-period-switch{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--panda-border-subtle);border-radius:8px;background:var(--panda-surface-recessed)}
+.todo-period-switch>button{min-height:23px;padding:3px 8px;border-radius:5px;background:transparent;color:var(--panda-text-muted);font-size:10px;line-height:16px;font-weight:500;white-space:nowrap}
+.todo-period-switch>button[aria-pressed=true]{background:var(--panda-surface-selected);box-shadow:var(--panda-control-shadow);color:var(--panda-text-primary)}
+.todo-period-switch>button:focus-visible{outline:2px solid var(--panda-focus);outline-offset:-2px}
 .month-period-heading{min-height:29px;margin-bottom:10px}
 .month-task-progress{width:100%;min-width:0;padding:1px 0 0}
 .month-progress-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
-.month-progress-heading h2{margin:0;min-width:0;font-size:12px;line-height:22px;font-weight:550;letter-spacing:-.1px;color:#e8eae7}
+.month-progress-heading h2{margin:0;min-width:0;font-size:12px;line-height:22px;font-weight:550;letter-spacing:-.1px;color:var(--panda-text-primary)}
 .month-progress-navigation{display:flex;align-items:center;gap:2px;flex:none}
-.month-progress-navigation>button{min-width:23px;min-height:23px;height:23px;padding:0 4px;border-radius:6px;color:#929b9e}
-.month-progress-navigation>.month-jump-today{font-size:9px;min-width:34px;padding:0 5px;color:#b8c2be}
+.month-progress-navigation>button{min-width:23px;min-height:23px;height:23px;padding:0 4px;border-radius:6px;color:var(--panda-text-muted)}
+.month-progress-navigation>.month-jump-today{font-size:9px;min-width:34px;padding:0 5px;color:var(--panda-text-secondary)}
 .month-progress-navigation>.month-jump-today:disabled{opacity:.3}
 .month-progress-table{width:calc(100% + 8px);margin:-4px;border-spacing:4px;table-layout:fixed;border-collapse:separate}
 .month-progress-table th{padding:0 0 2px;font-weight:500;text-align:center}
-.month-progress-table th>span{display:flex;align-items:center;justify-content:center;min-height:21px;border-radius:7px;background:#1a1d1e;color:#9ca5a8;font-size:8px;line-height:1;letter-spacing:.05px}
+.month-progress-table th>span{display:flex;align-items:center;justify-content:center;min-height:21px;border-radius:7px;background:var(--panda-surface-inset);color:var(--panda-text-muted);font-size:8px;line-height:1;letter-spacing:.05px}
 .month-progress-cell{padding:0;vertical-align:top}
-.month-progress-day{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1;min-height:48px;padding:18px 3px 4px;border-radius:9px;background:#202122;box-shadow:0 1px 0 #ffffff05 inset}
-.month-progress-date{position:absolute;top:3px;left:4px;display:flex;align-items:center;justify-content:center;width:14px;height:14px;color:#c1c7c6;font-size:9px;font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
-.month-progress-day.is-today .month-progress-date{border-radius:50%;background:#b7d6c5;color:#14231a}
+.month-progress-day{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1;min-height:48px;padding:18px 3px 4px;border-radius:9px;background:var(--panda-surface-recessed);box-shadow:0 1px 0 #ffffff05 inset}
+.month-progress-date{position:absolute;top:3px;left:4px;display:flex;align-items:center;justify-content:center;width:14px;height:14px;color:var(--panda-text-secondary);font-size:9px;font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
+.month-progress-day.is-today .month-progress-date{border-radius:50%;background:var(--panda-control-on);color:var(--panda-control-glyph)}
 .month-day-progress{position:relative;display:block;width:24px;height:24px;flex:none}
 .month-day-progress:not(.has-progress){display:none}
 .month-day-progress svg{display:block;width:24px;height:24px;overflow:visible;fill:none;stroke-width:1.65}
 .month-ring-track{stroke:#ffffff10}.has-progress .month-ring-track{stroke:#ffffff20}
-.month-ring-fill{stroke:#9cafaa;stroke-linecap:round}.is-complete .month-ring-fill{stroke:#b7d6c5}
-.month-progress-ratio{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b6c2bd;font-size:7px;line-height:1;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
-.month-progress-evidence{height:8px;flex:none;max-width:100%;margin-top:3px;color:#7f8986;font-size:6px;line-height:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.month-ring-fill{stroke:var(--panda-progress-fill);stroke-linecap:round}.is-complete .month-ring-fill{stroke:var(--panda-progress-complete)}
+.month-progress-ratio{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--panda-text-secondary);font-size:7px;line-height:1;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.month-progress-evidence{height:8px;flex:none;max-width:100%;margin-top:3px;color:var(--panda-text-muted);font-size:6px;line-height:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .month-progress-evidence:empty{display:none}
-.month-progress-cell.is-outside .month-progress-day{background:#151819;box-shadow:none}
-.month-progress-cell.is-outside .month-progress-date{color:#4e5555}
+.month-progress-cell.is-outside .month-progress-day{background:var(--panda-surface-inset);box-shadow:none}
+.month-progress-cell.is-outside .month-progress-date{color:var(--panda-text-disabled)}
 .month-progress-cell.is-outside .month-ring-track{stroke:#ffffff06}

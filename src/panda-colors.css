@@ -1,0 +1,49 @@
+/* Panda's neutral ramp preserves the original main-tab luminance without a hue cast. */
+:root{
+ --panda-gray-50:#f2f2f2;--panda-gray-100:#c5c5c5;
+ --panda-gray-300:#9a9a9a;--panda-gray-400:#909090;--panda-gray-600:#626262;
+ --panda-gray-700:#3c3c3c;--panda-gray-750:#323232;--panda-gray-800:#2e2e2e;
+ --panda-gray-825:#282828;--panda-gray-875:#212121;--panda-gray-925:#161616;
+ --panda-gray-950:#090909;--panda-gray-975:#050505;
+ --panda-bg:var(--panda-gray-950);--panda-surface-shadow:var(--panda-gray-975);
+ --panda-surface-inset:var(--panda-gray-925);--panda-surface-recessed:var(--panda-gray-875);
+ --panda-surface:var(--panda-gray-825);--panda-surface-raised:var(--panda-gray-750);
+ --panda-surface-highlight:var(--panda-gray-700);
+ --panda-surface-selected:linear-gradient(180deg,var(--panda-gray-700),var(--panda-gray-800));
+ --panda-surface-card:linear-gradient(180deg,var(--panda-gray-825),var(--panda-gray-875));
+ --panda-text-primary:var(--panda-gray-50);--panda-text-secondary:var(--panda-gray-100);
+ --panda-text-muted:var(--panda-gray-300);--panda-text-subtle:var(--panda-gray-400);
+ --panda-text-disabled:var(--panda-gray-600);
+ --panda-marker-muted:var(--panda-gray-600);--panda-progress-fill:var(--panda-gray-300);--panda-progress-complete:var(--panda-gray-100);
+ --panda-border-subtle:#ffffff0c;--panda-border:#ffffff16;--panda-border-strong:#ffffff2a;
+ --panda-control-on:var(--panda-gray-100);--panda-control-glyph:var(--panda-gray-925);
+ --panda-focus:var(--panda-gray-100);--panda-focus-halo:rgb(197 197 197 / 22%);
+ --panda-control-shadow:0 2px 4px #0005,inset 0 1px 0 #ffffff13,inset 0 -1px 0 #0003;
+ --panda-scroll-thumb:#ffffff33;
+}
+
+/* Local roles override the bundled library's optional accent themes inside Panda. */
+.app-shell{
+ --notch-background:var(--panda-bg);--background:var(--panda-bg);
+ --surface:var(--panda-surface);--surface-raised:var(--panda-surface-raised);--surface-muted:var(--panda-surface-raised);
+ --foreground:var(--panda-text-primary);--text:var(--panda-text-primary);
+ --text-secondary:var(--panda-text-secondary);--text-muted:var(--panda-text-muted);--muted:var(--panda-text-muted);
+ --border:var(--panda-border);--border-subtle:var(--panda-border-subtle);--border-strong:var(--panda-border-strong);
+ --accent:var(--panda-text-secondary);--accent-strong:var(--panda-text-primary);--accent-subtle:#ffffff13;--accent-foreground:var(--panda-control-glyph);
+ --control-on:var(--panda-control-on);--control-fill:var(--panda-control-on);--control-glyph:var(--panda-control-glyph);
+ --control-track:var(--panda-surface-raised);--control-track-hover:var(--panda-surface-highlight);
+ --control-thumb:var(--panda-text-primary);--control-thumb-on:var(--panda-control-glyph);
+ --blue:var(--panda-text-secondary);--mint:var(--panda-text-secondary);
+ --arc-bg:var(--panda-bg);--arc-fg:var(--panda-text-primary);--arc-surface:var(--panda-surface);--arc-border:var(--panda-border-strong);
+ --arc-text:var(--panda-text-primary);--arc-text-muted:var(--panda-text-muted);
+ --arc-accent:var(--panda-text-secondary);--arc-accent-hover:var(--panda-text-primary);--arc-accent-contrast:var(--panda-control-glyph);
+ --field-focus:var(--panda-focus);--field-halo:var(--panda-focus-halo);
+}
+
+.app-shell .main-tabs{--surface:var(--panda-surface-selected)}
+.app-shell :is(.view-scroll,.task-list,.planner-calendar-scroll,.pins-list,.reminder-list,.saved-notes){scrollbar-color:var(--panda-scroll-thumb) transparent!important}
+.app-shell .view-scroll::-webkit-scrollbar-thumb{background:var(--panda-scroll-thumb)}
+.app-shell .task-workspace .done button.task-title{color:var(--panda-text-subtle);text-decoration-color:var(--panda-text-disabled)}
+.app-shell .row-actions button:hover{color:var(--panda-text-primary)}
+.app-shell .edit-tools button,.app-shell .music-buddy{color:var(--panda-text-secondary)}
+.app-shell .music-buddy img,.app-shell .music-cover-fallback{background:var(--panda-surface-recessed)}

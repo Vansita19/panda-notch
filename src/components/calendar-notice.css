@@ -1,9 +1,9 @@
-.calendar-notice{box-sizing:border-box;display:flex;align-items:center;gap:7px;width:max-content;min-width:0;max-width:min(520px,calc(var(--panel-width,400px) - 28px),calc(100vw - 28px));height:40px;min-height:40px;margin:0;padding:7px 10px;border:1px solid #ffffff16;border-radius:20px;background:linear-gradient(#292d32,#22262b);box-shadow:0 1px 0 #ffffff07 inset,0 5px 14px #0004;color:#dce2e4;pointer-events:auto}
-.calendar-notice-icon{display:block;flex:none;color:#aab5bc}
-.calendar-notice-title{display:block;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:450;line-height:16px;color:#dce2e4}
-.calendar-notice-time{flex:none;white-space:nowrap;color:#8f9ca5;font-size:9px;font-weight:450;line-height:14px;font-variant-numeric:tabular-nums}
-.calendar-notice-snooze,.calendar-notice-dismiss{display:inline-flex;flex:none;align-items:center;justify-content:center;min-height:24px;height:24px;margin:0;border-radius:7px;color:#b9c5ca;white-space:nowrap;font:500 9px/1 -apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;cursor:pointer}
+.calendar-notice{box-sizing:border-box;display:flex;align-items:center;gap:7px;width:max-content;min-width:0;max-width:min(520px,calc(var(--panel-width,400px) - 28px),calc(100vw - 28px));height:40px;min-height:40px;margin:0;padding:7px 10px;border:1px solid #ffffff16;border-radius:20px;background:var(--panda-surface-card);box-shadow:0 1px 0 #ffffff07 inset,0 5px 14px #0004;color:var(--panda-text-primary);pointer-events:auto}
+.calendar-notice-icon{display:block;flex:none;color:var(--panda-text-secondary)}
+.calendar-notice-title{display:block;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:450;line-height:16px;color:var(--panda-text-primary)}
+.calendar-notice-time{flex:none;white-space:nowrap;color:var(--panda-text-muted);font-size:9px;font-weight:450;line-height:14px;font-variant-numeric:tabular-nums}
+.calendar-notice-snooze,.calendar-notice-dismiss{display:inline-flex;flex:none;align-items:center;justify-content:center;min-height:24px;height:24px;margin:0;border-radius:7px;color:var(--panda-text-secondary);white-space:nowrap;font:500 9px/1 -apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;cursor:pointer}
 .calendar-notice-snooze{padding:0 6px;border:1px solid #ffffff0c;background:#ffffff05}
-.calendar-notice-dismiss{width:20px;min-width:20px;padding:0;border:0;background:transparent;color:#85929d}
-.calendar-notice-snooze:focus-visible,.calendar-notice-dismiss:focus-visible{outline:2px solid #b7c8ff;outline-offset:1px}
-@media(hover:hover) and (pointer:fine){.calendar-notice-snooze:hover{background:#ffffff0b;color:#dce5e7}.calendar-notice-dismiss:hover{color:#dce5e7}}
+.calendar-notice-dismiss{width:20px;min-width:20px;padding:0;border:0;background:transparent;color:var(--panda-text-muted)}
+.calendar-notice-snooze:focus-visible,.calendar-notice-dismiss:focus-visible{outline:2px solid var(--panda-focus);outline-offset:1px}
+@media(hover:hover) and (pointer:fine){.calendar-notice-snooze:hover{background:#ffffff0b;color:var(--panda-text-primary)}.calendar-notice-dismiss:hover{color:var(--panda-text-primary)}}

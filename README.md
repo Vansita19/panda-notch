@@ -67,9 +67,11 @@ In **To-Do → Today**, add your to-dos, then choose **Expand** or click a task 
 
 You can also start on the calendar: hover empty space for a plus, drag a time span, and name the new event in the small inline field. Panda adds its matching task, then saves the event to the connected calendar. If Calendar cannot save, the named task stays available without a scheduled time.
 
-Expand and Compact use one interruptible transition: the calendar fades and slides right on closing while the checklist returns to the center. Its scroll viewport stays intact until the fade ends, including when a smaller display limits the expanded width.
+Expand and Compact use one interruptible transition: the calendar fades and slides right on closing while the checklist returns to the center. Its scroll viewport stays intact until the fade ends, including when a smaller display limits the expanded width. Scheduled labels keep their layout space while hidden in the expanded view, then fade back in without rewrapping the rows during Compact.
 
 The expanded planner gives equal space to tasks and calendar. Task names stay left and priority signals stay at the right edge. Scheduled times appear beside tasks only in Compact; the expanded calendar already shows each event’s time. Metadata slides left to reveal edit and delete controls on hover or keyboard focus. Long names and metadata wrap when needed.
+
+Panda’s neutral surfaces, selected controls, text, borders, and focus indicators share one gray palette in `src/panda-colors.css`. Main navigation, Today/This Month, Focus controls, calendar controls, and popovers use the same selected-surface gradient. Event colors, priority signals, Focus mode icons/progress, and Menu artwork retain their distinct meanings.
 
 The right calendar scrolls independently of the left checklist, with the hour-range controls kept in place. Long checklists can scroll separately too. Threads follow visible blocks and disappear when either endpoint is outside its column; scrolling does not rerender the task list. Calendar hour labels and range controls use a 12-hour AM/PM clock. Click a task's priority signal to cycle Low (green), Medium (yellow), and High (red) without opening its calendar.
 
