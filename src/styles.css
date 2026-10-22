@@ -369,8 +369,9 @@ body{position:fixed;inset:0}
 
 /* Compact reverses the painted wide composition before changing its layout. */
 .app-shell[data-planner-contracting=true][data-view=tasks] .view-scroll{overflow:visible}
-.app-shell[data-planner-contracting=true] .task-workspace{width:calc(var(--planner-layout-width) - 36px);height:var(--planner-compact-content-height);min-height:0;overflow:visible}
+.app-shell[data-planner-contracting=true] .task-workspace{width:calc(var(--planner-layout-width) - 36px);height:var(--planner-workspace-height);min-height:0;overflow:visible}
 .app-shell[data-planner-contracting=true] .planner-day{pointer-events:none}
+.app-shell[data-planner-contracting=true] .task-checklist{width:var(--task-column-width)}
 
 /* Navigation and the chosen page share one reveal; they never arrive in separate layouts. */
 .panel-body{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
@@ -387,6 +388,7 @@ body{position:fixed;inset:0}
 @media(prefers-reduced-motion:reduce){.task-workspace .task-meta,.task-workspace .row-actions{transition:none}}
 [data-reduced=true] .task-workspace .task-meta,[data-reduced=true] .task-workspace .row-actions,[data-input-modality=keyboard] .task-workspace .task-meta,[data-input-modality=keyboard] .task-workspace .row-actions{transition:none}
 /* Feedback sits beneath the painted notch, outside its animated clipping canvas. */
-.toast-position{position:absolute;left:0;right:0;top:0;z-index:50;display:grid;justify-items:center;pointer-events:none}
-.toast-position>.toast{position:relative;inset:auto;grid-area:1 / 1;width:max-content;max-width:min(372px,calc(100% - 28px));min-height:40px;margin:0;pointer-events:auto}
+.toast-position{position:absolute;left:0;right:0;top:0;z-index:50;display:grid;justify-items:center;row-gap:8px;pointer-events:none}
+.toast-position>.toast{position:relative;inset:auto;width:max-content;max-width:min(372px,calc(100% - 28px));min-height:40px;margin:0;pointer-events:auto}
+.calendar-notice-layer{width:max-content;max-width:100%;min-width:0}
 .toast-position .toast-message{flex:0 1 auto;min-width:0;overflow-wrap:break-word}

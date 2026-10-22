@@ -1,9 +1,9 @@
 import {useLayoutEffect,useRef,useState,type MutableRefObject,type RefObject} from 'react';
 
-type Connection={taskId:string;d:string};
+type Connection={taskId:string;d:string;targetX:number;targetY:number};
 type ElementMap=MutableRefObject<Map<string,HTMLElement>>;
 type Rect=Pick<DOMRect,'left'|'top'|'width'|'height'>;
-type Geometry={d:string;hidden:boolean};
+type Geometry={d:string;hidden:boolean;targetX:number;targetY:number};
 const rounded=(value:number)=>Math.round(value*100)/100;
 const validRect=(rect:Rect)=>[rect.left,rect.top,rect.width,rect.height].every(Number.isFinite)&&rect.width>0&&rect.height>0;
 const visiblePart=(rect:Rect,viewport?:Rect)=>{
@@ -25,17 +25,32 @@ export function plannerConnectionGeometry(node:Rect,block:Rect,origin:Rect,viewp
  const points=[ax,ay,ax+dx*.33,ay+dy*.33+sag,ax+dx*.67,ay+dy*.67+sag,bx,by].map(rounded);
  if(points.some(value=>!Number.isFinite(value)))return null;
  const [x1,y1,c1x,c1y,c2x,c2y,x2,y2]=points;
- return {d:`M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`,hidden:!source||!target};
+ return {d:`M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`,hidden:!source||!target,targetX:x2,targetY:y2};
+}
+
+/** Hit-test a wider cord without taking pointer or wheel events from the calendar below it. */
+export function plannerThreadAtPoint(paths:Iterable<SVGPathElement>,point:{x:number;y:number}):string|null{
+ if(!Number.isFinite(point.x)||!Number.isFinite(point.y))return null;
+ for(const path of paths){
+  if(path.getAttribute('display')==='none'||path.style.visibility==='hidden')continue;
+  if(path.isPointInStroke?.(point))return path.dataset.taskId||null;
+ }
+ return null;
 }
 
 function applyPaths(root:HTMLElement,geometry:Map<string,Geometry>){
- for(const path of root.querySelectorAll<SVGPathElement>('path.saved-thread[data-task-id]')){
+ for(const path of root.querySelectorAll<SVGPathElement>('path.saved-thread[data-task-id],path.saved-thread-hit[data-task-id]')){
   const next=geometry.get(path.dataset.taskId??'');
   if(!next)continue;
   if(path.getAttribute('d')!==next.d)path.setAttribute('d',next.d);
   // Docking owns inline visibility. Display independently clips scrolled-out cords.
   if(next.hidden){if(path.getAttribute('display')!=='none')path.setAttribute('display','none');}
   else if(path.hasAttribute('display'))path.removeAttribute('display');
+ }
+ for(const dot of root.querySelectorAll<SVGCircleElement>('circle.saved-thread-endpoint[data-task-id]')){
+  const next=geometry.get(dot.dataset.taskId??'');if(!next)continue;
+  dot.setAttribute('cx',String(next.targetX));dot.setAttribute('cy',String(next.targetY));
+  if(next.hidden)dot.setAttribute('display','none');else dot.removeAttribute('display');
  }
 }
 
@@ -71,7 +86,7 @@ export function usePlannerConnections(rootRef:RefObject<HTMLElement|null>,nodeRe
    // Scrolling changes geometry, not React identities or parent task renders.
    if(ids.length!==identities.current.length||ids.some((id,i)=>id!==identities.current[i])){
     identities.current=ids;
-    setConnections(ids.map(taskId=>({taskId,d:next.get(taskId)!.d})));
+    setConnections(ids.map(taskId=>{const cord=next.get(taskId)!;return {taskId,d:cord.d,targetX:cord.targetX,targetY:cord.targetY};}));
    }
   };
   const flush=(stamp:number)=>{frame=0;if(disposed)return;measure();if(stamp<followUntil)frame=requestAnimationFrame(flush);};

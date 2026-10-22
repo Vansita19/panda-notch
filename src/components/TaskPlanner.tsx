@@ -1,34 +1,54 @@
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Maximize2,Minimize2,X,Unlink,ChevronUp,ChevronDown} from 'lucide-react';
+import {Maximize2,Minimize2,X,Unlink,ChevronUp,ChevronDown,Plus} from 'lucide-react';
 import {Button} from '../arc/button/button';
 import {host,native} from '../bridge';
 import {writeCalendar} from '../calendar-write';
 import {dayRange,timeAt,hoverHourAt,selectionRange,moveRange,layoutEvents,mergePlannerEvents,plannerColors,validSlot} from '../planner.mjs';
 import {visibleTasks} from '../model.mjs';
 import {plannerMoveDelta,plannerHourLabel} from '../planner-viewport.mjs';
-import {notchMotion} from '../notch-motion.mjs';
-import {usePlannerConnections} from './usePlannerConnections';
+import {usePlannerConnections,plannerThreadAtPoint} from './usePlannerConnections';
 import {TaskPriorityChoices} from './TaskPriority';
+import {NewEventComposer} from './NewEventComposer';
 import {eventDraftUpdate,stepEventTime,anchoredPosition} from '../event-details.mjs';
 import './task-planner.css';
 const clock=(ms:number)=>new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
 const inputTime=(ms:number)=>{const d=new Date(ms);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
-export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,renderTasks,notify,now,heading='Today'}:any){
+export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,renderTasks,notify,now,heading='Today',onCreateTask}:any){
  const isLayoutActive=layoutActive??active;
  const [calendarId,setCalendarId]=useState(''),[busy,setBusy]=useState<string|null>(null),[error,setError]=useState(''),[selected,setSelected]=useState<string|null>(null),[selectedAnchor,setSelectedAnchor]=useState<'task'|'calendar'>('calendar'),[editorFloor,setEditorFloor]=useState(0),[linking,setLinking]=useState<string|null>(null),[ghost,setGhost]=useState<any>(null),[preview,setPreview]=useState<any>(null),[hoveredTask,setHoveredTask]=useState<string|null>(null),[docking,setDocking]=useState<string|null>(null),[manipulating,setManipulating]=useState<string|null>(null);
  const root=useRef<HTMLDivElement>(null),column=useRef<HTMLElement>(null),day=useRef<HTMLElement>(null),grid=useRef<HTMLDivElement>(null),calendarViewport=useRef<HTMLDivElement>(null),path=useRef<SVGPathElement>(null),tip=useRef<SVGGElement>(null);
- const interaction=useRef<any>(null),raf=useRef(0),spring=useRef<any>(null),keyboard=useRef<any>(null),latest=useRef<any>(null),previousActive=useRef(active),columnAnimation=useRef<Animation|null>(null),dayAnimation=useRef<Animation|null>(null),ignoreClick=useRef<string|null>(null);
+ const interaction=useRef<any>(null),raf=useRef(0),spring=useRef<any>(null),keyboard=useRef<any>(null),latest=useRef<any>(null),previousActive=useRef(active),ignoreClick=useRef<string|null>(null);
  const nodeRefs=useRef(new Map<string,HTMLElement>()),blockRefs=useRef(new Map<string,HTMLElement>()),dockFrame=useRef(0),dockFrom=useRef<any>(null),requestVersion=useRef(0),busyRef=useRef<string|null>(null);
+ const hoveredTaskRef=useRef<string|null>(null);
+ const [creating,setCreating]=useState<{start:number;end:number}|null>(null),ghostAnchor=useRef<HTMLDivElement>(null),calendarPoint=useRef<number|null>(null);
  const startHour=s.settings.plannerStart??7,endHour=s.settings.plannerEnd??23,range=dayRange(now,startHour,endHour);
  const writable=(info.calendars??[]).filter((c:any)=>c.writable&&s.calendar.selectedIds.includes(c.id));
  useEffect(()=>{if(!writable.some((c:any)=>c.id===calendarId))setCalendarId(writable.find((c:any)=>c.id===info.defaultCalendarId)?.id||writable[0]?.id||'');},[JSON.stringify(writable),info.defaultCalendarId,calendarId]);
  const tasks=visibleTasks(s,now),events=layoutEvents(mergePlannerEvents(s.events,tasks,preview),range),current=tasks.find((t:any)=>t.id===selected);
- const layoutKey=JSON.stringify([startHour,endHour,tasks.map((t:any)=>[t.id,t.title]),events.map((e:any)=>[e.taskId||e.id,e.top,e.height,e.lane,e.lanes])]);
+ const layoutKey=JSON.stringify([active,startHour,endHour,tasks.map((t:any)=>[t.id,t.title]),events.map((e:any)=>[e.taskId||e.id,e.top,e.height,e.lane,e.lanes])]);
  const connections=usePlannerConnections(root,nodeRefs,blockRefs,isLayoutActive,layoutKey,calendarViewport);
- const highlightedTask=linking||manipulating||busy||docking||selected||hoveredTask;
+ const highlightedTask=linking||manipulating||busy||docking||hoveredTask||selected;
+ const hoverTask=(id:string|null)=>{if(hoveredTaskRef.current===id)return;hoveredTaskRef.current=id;setHoveredTask(id);};
+ const pointerHover=(event:React.PointerEvent)=>{
+  const linked=(event.target as Element).closest<HTMLElement>('[data-linked-task]');
+  if(linked){hoverTask(linked.dataset.linkedTask||null);return;}
+  const workspace=root.current;
+  if(!workspace||!active||interaction.current||busyRef.current){hoverTask(null);return;}
+  const rect=(workspace.querySelector<SVGSVGElement>('.planner-thread')??workspace).getBoundingClientRect();
+  hoverTask(plannerThreadAtPoint(workspace.querySelectorAll<SVGPathElement>('path.saved-thread-hit'),{x:event.clientX-rect.left,y:event.clientY-rect.top}));
+ };
  const canWrite=!native||s.calendar.mode==='connected'&&!!calendarId;
  const stopGesture=(keepPath=false)=>{if(raf.current)cancelAnimationFrame(raf.current);raf.current=0;interaction.current=null;spring.current=null;keyboard.current=null;if(!keepPath)path.current?.setAttribute('d','');tip.current?.setAttribute('visibility','hidden');setGhost(null);setLinking(null);setManipulating(null);};
- const clear=()=>{stopGesture();if(dockFrame.current)cancelAnimationFrame(dockFrame.current);dockFrame.current=0;dockFrom.current=null;setDocking(null);setPreview((p:any)=>p?.phase==='saving'||p?.phase==='committed'?p:null);};
+ const clear=()=>{stopGesture();setCreating(null);if(dockFrame.current)cancelAnimationFrame(dockFrame.current);dockFrame.current=0;dockFrom.current=null;setDocking(null);setPreview((p:any)=>p?.phase==='saving'||p?.phase==='committed'?p:null);};
+ const closeCreation=()=>{clear();grid.current?.focus({preventScroll:true});};
+ const openCreation=(slot:{start:number;end:number})=>{if(!canWrite||busyRef.current||!onCreateTask)return;clear();setSelected(null);setCreating(slot);setGhost({...slot,selecting:true});};
+ const createCalendarTask=async(title:string)=>{
+  if(!creating||busyRef.current)return {ok:false,error:'Calendar is still saving the previous change.'};
+  busyRef.current='new-calendar-task';setBusy('new-calendar-task');
+  try{const result=await onCreateTask({title,...creating,calendarId});if(result.task&&!result.ok)notify(result.error||'Task added, but Calendar could not save its time.');return result;}
+  catch(reason:any){return {ok:false,error:reason?.message||'Could not add this event. Try again.'};}
+  finally{busyRef.current=null;setBusy(null);}
+ };
  const submit=async(task:any,slot:any,operation='save')=>{
   if(busyRef.current)return {ok:false,error:'Calendar is still saving the previous change.'};const version=++requestVersion.current;busyRef.current=task.id;setError('');setBusy(task.id);
   if(operation==='save'){
@@ -56,34 +76,23 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   const block=blockRefs.current.get(docking),node=nodeRefs.current.get(docking);if(!block||!node)return;
   const a=node.getBoundingClientRect(),b=block.getBoundingClientRect(),r=root.current.getBoundingClientRect(),ax=a.left+a.width/2-r.left,ay=a.top+a.height/2-r.top,bx=b.left-r.left,by=b.top+b.height/2-r.top,dx=bx-ax,dy=by-ay,sag=Math.min(60,Math.max(30,Math.abs(dx)*.18+Math.abs(dy)*.07));
   const target=[ax,ay,ax+dx*.33,ay+dy*.33+sag,ax+dx*.67,ay+dy*.67+sag,bx,by],from=(path.current?.getAttribute('d')||dockFrom.current.d).match(/-?\d+(?:\.\d+)?/g)?.map(Number);
-  const finish=()=>{root.current?.querySelectorAll<SVGPathElement>('.saved-thread').forEach(p=>{if(p.dataset.taskId===docking)p.style.visibility='visible';});path.current?.setAttribute('d','');dockFrom.current=null;dockFrame.current=0;setDocking(null);};
+  const finish=()=>{root.current?.querySelectorAll<SVGElement>('.saved-thread,.saved-thread-hit,.saved-thread-endpoint').forEach(p=>{if(p.dataset.taskId===docking)p.style.visibility='visible';});path.current?.setAttribute('d','');dockFrom.current=null;dockFrame.current=0;setDocking(null);};
   if(!from||from.length!==8||s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches){finish();return;}
   const start=performance.now();
   const frame=(stamp:number)=>{const t=Math.min(1,(stamp-start)/220),ease=1-Math.pow(1-t,3),p=target.map((value,i)=>from[i]+(value-from[i])*ease);path.current?.setAttribute('d',`M ${p[0]} ${p[1]} C ${p[2]} ${p[3]}, ${p[4]} ${p[5]}, ${p[6]} ${p[7]}`);if(t<1)dockFrame.current=requestAnimationFrame(frame);else finish();};
   dockFrame.current=requestAnimationFrame(frame);return()=>{if(dockFrame.current)cancelAnimationFrame(dockFrame.current);};
  },[docking]);
- latest.current={range,canWrite,busy,tasks,reduced:s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches,submit,clear,active};
- // Keep one checklist mounted; the expanded halves share the same available width.
- useLayoutEffect(()=>{
-  if(previousActive.current===active)return;const was=previousActive.current;previousActive.current=active;
-  const node=column.current;if(!node)return;
-  const reduce=s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const taskWidth=parseFloat(getComputedStyle(root.current!).getPropertyValue('--task-column-width'))||364;
-  const wide=Math.min((taskWidth+36)*2,screen.availWidth-60),delta=(wide-(taskWidth+36))/2;
-  const inFlight=columnAnimation.current?new DOMMatrixReadOnly(getComputedStyle(node).transform).m41:0;
-  columnAnimation.current?.cancel();
-  if(!reduce){const animation=node.animate([{transform:`translateX(${inFlight+(active?delta:-delta)}px)`},{transform:'translateX(0px)'}],{duration:notchMotion.open,easing:notchMotion.ease});columnAnimation.current=animation;animation.onfinish=()=>{if(columnAnimation.current===animation)columnAnimation.current=null;};}
-  dayAnimation.current?.cancel();
-  if(day.current&&!reduce){const animation=day.current.animate(active?[{opacity:0,transform:'translateX(36px)'},{opacity:1,transform:'translateX(0)'}]:[{opacity:1},{opacity:0}],{duration:active?notchMotion.open:130,easing:notchMotion.ease});dayAnimation.current=animation;animation.onfinish=()=>{if(dayAnimation.current===animation)dayAnimation.current=null;};}
-  if(was&&!active){clear();setSelected(null);}
- },[active,s.settings.reducedMotion]);
- useEffect(()=>()=>{if(raf.current)cancelAnimationFrame(raf.current);if(dockFrame.current)cancelAnimationFrame(dockFrame.current);columnAnimation.current?.cancel();dayAnimation.current?.cancel();},[]);
+ latest.current={range,canWrite,busy,tasks,reduced:s.settings.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches,submit,clear,active,creating,openCreation,closeCreation};
+ // Geometry and calendar visibility share the shell's one interruptible transition.
+ useLayoutEffect(()=>{const was=previousActive.current;previousActive.current=active;if(was&&!active){clear();setSelected(null);}},[active]);
+ useEffect(()=>()=>{if(raf.current)cancelAnimationFrame(raf.current);if(dockFrame.current)cancelAnimationFrame(dockFrame.current);},[]);
  const updateGhost=(value:any)=>setGhost((old:any)=>old?.start===value?.start&&old?.end===value?.end&&old?.selecting===value?.selecting?old:value);
  // The end follows the cursor precisely; only the middle of the cord has inertia.
  // This loop runs during a gesture and stops once the cord settles.
  const draw=(stamp:number)=>{
   raf.current=0;const d=interaction.current,r=root.current?.getBoundingClientRect();if(!d||!r)return;
   const rect=grid.current?.getBoundingClientRect(),p=d.pointer;
+  if(d.mode==='create'){if(rect&&p){const slot=selectionRange(d.anchor,timeAt(p.y-rect.top,rect.height,latest.current.range),latest.current.range);if(slot)updateGhost({...slot,selecting:true});}return;}
   if(rect&&p&&!keyboard.current){
    const viewport=calendarViewport.current?.getBoundingClientRect()||rect;
    const inside=p.x>=rect.left+40&&p.x<=rect.right&&p.y>=Math.max(rect.top,viewport.top)&&p.y<=Math.min(rect.bottom,viewport.bottom);
@@ -105,31 +114,45 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
  const schedule=()=>{if(!raf.current)raf.current=requestAnimationFrame(draw);};
  useEffect(()=>{
   const move=(e:PointerEvent)=>{const d=interaction.current;if(!d||d.pointerId!==undefined&&d.pointerId!==e.pointerId)return;keyboard.current=null;d.pointer={x:e.clientX,y:e.clientY};if(d.mode==='move-pending'){if(Math.hypot(e.clientX-d.originX,e.clientY-d.originY)<4)return;d.mode='move';ignoreClick.current=d.task.id;}schedule();};
-  const finish=(e:PointerEvent)=>{const d=interaction.current;if(!d||d.mode==='armed'||d.pointerId!==undefined&&d.pointerId!==e.pointerId)return;if(d.mode==='move-pending'){stopGesture();return;}const rect=grid.current?.getBoundingClientRect();if(!rect)return;const t=timeAt(e.clientY-rect.top,rect.height,latest.current.range);const slot=d.mode==='move'?moveRange(d.task.calendarLink.start,d.task.calendarLink.end,plannerMoveDelta(e.clientY,rect.top,d.originGridY,rect.height,latest.current.range.end-latest.current.range.start),latest.current.range):d.mode==='resize'?{start:d.task.calendarLink.start,end:Math.max(d.task.calendarLink.start+900000,t)}:selectionRange(d.anchor,t,latest.current.range);if(!slot||d.mode==='move'&&slot.start===d.task.calendarLink.start&&slot.end===d.task.calendarLink.end){latest.current.clear();return;}void latest.current.submit(d.task,slot);};
-  const cancel=(e:KeyboardEvent)=>{if(e.key==='Escape'&&(interaction.current||selected)){e.preventDefault();e.stopImmediatePropagation();latest.current.clear();setSelected(null);}};
+  const finish=(e:PointerEvent)=>{const d=interaction.current;if(!d||d.mode==='armed'||d.pointerId!==undefined&&d.pointerId!==e.pointerId)return;if(d.mode==='move-pending'){stopGesture();return;}const rect=grid.current?.getBoundingClientRect();if(!rect)return;const t=timeAt(e.clientY-rect.top,rect.height,latest.current.range);const slot=d.mode==='move'?moveRange(d.task.calendarLink.start,d.task.calendarLink.end,plannerMoveDelta(e.clientY,rect.top,d.originGridY,rect.height,latest.current.range.end-latest.current.range.start),latest.current.range):d.mode==='resize'?{start:d.task.calendarLink.start,end:Math.max(d.task.calendarLink.start+900000,t)}:selectionRange(d.anchor,t,latest.current.range);if(!slot||d.mode==='move'&&slot.start===d.task.calendarLink.start&&slot.end===d.task.calendarLink.end){latest.current.clear();return;}if(d.mode==='create'){stopGesture();latest.current.openCreation(slot);return;}void latest.current.submit(d.task,slot);};
+  const cancel=(e:KeyboardEvent)=>{if(e.key==='Escape'&&(interaction.current||selected||latest.current.creating)){e.preventDefault();e.stopImmediatePropagation();if(!busyRef.current){if(latest.current.creating)latest.current.closeCreation();else latest.current.clear();setSelected(null);}}};
   const pointerCancel=()=>latest.current.clear();
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',pointerCancel);window.addEventListener('keydown',cancel,true);
   return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',pointerCancel);window.removeEventListener('keydown',cancel,true);};
  },[selected]);
  const arm=(task:any,node:HTMLElement,x:number,y:number)=>{
-  if(!canWrite||busy)return;if(interaction.current?.task.id===task.id){clear();return;}
+  if(!canWrite||busy||busyRef.current)return;if(interaction.current?.task?.id===task.id){clear();return;}
   clear();setSelected(null);interaction.current={task,node,mode:'armed',pointer:{x,y}};setLinking(task.id);schedule();
  };
  const nodeForTask=(t:any)=><button type="button" className="thread-node" data-linked={!!t.calendarLink&&!t.calendarLink.missing} ref={el=>{if(el)nodeRefs.current.set(t.id,el);else nodeRefs.current.delete(t.id);}} hidden={!isLayoutActive} aria-label={`Link ${t.title} to calendar`} aria-pressed={linking===t.id} title="Click, then drag a time span on the calendar" disabled={!!busy||!canWrite} draggable={false} onDragStart={e=>e.preventDefault()} onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();arm(t,e.currentTarget,e.clientX,e.clientY);}} onClick={e=>{if(e.detail!==0)return;const r=e.currentTarget.getBoundingClientRect();arm(t,e.currentTarget,r.right,r.top+r.height/2);grid.current?.focus();}}><span/></button>;
  const beginSelection=(e:React.PointerEvent)=>{
-  const d=interaction.current;if(!d||d.mode!=='armed'||e.button!==0||!grid.current)return;
+  const d=interaction.current;if(e.button!==0||!grid.current)return;
   const r=grid.current.getBoundingClientRect();if(e.clientX<r.left+40)return;
+  if(!d){
+   if(!active||!canWrite||busyRef.current||creating||!onCreateTask||(e.target as Element).closest('.planner-event,button,input,select,textarea,a,[role=button]'))return;
+   e.preventDefault();e.stopPropagation();clear();setSelected(null);grid.current.setPointerCapture(e.pointerId);const anchor=timeAt(e.clientY-r.top,r.height,range);
+   interaction.current={mode:'create',pointerId:e.pointerId,anchor,pointer:{x:e.clientX,y:e.clientY}};updateGhost({...selectionRange(anchor,anchor,range),selecting:true});return;
+  }
+  if(d.mode!=='armed')return;
   e.preventDefault();e.stopPropagation();grid.current.setPointerCapture(e.pointerId);d.mode='select';d.pointerId=e.pointerId;d.anchor=timeAt(e.clientY-r.top,r.height,range);d.pointer={x:e.clientX,y:e.clientY};schedule();
  };
  const beginResize=(e:React.PointerEvent,t:any)=>{
-  if(e.button!==0||busy||!canWrite)return;e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,mode:'resize',pointerId:e.pointerId,pointer:{x:e.clientX,y:e.clientY}};schedule();
+  if(e.button!==0||busy||busyRef.current||!canWrite)return;e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,mode:'resize',pointerId:e.pointerId,pointer:{x:e.clientX,y:e.clientY}};schedule();
  };
  const beginMove=(e:React.PointerEvent,t:any)=>{
-  if(e.button!==0||busy||linking||!canWrite||!t?.calendarLink||t.calendarLink.missing)return;
+  if(e.button!==0||busy||busyRef.current||linking||!canWrite||!t?.calendarLink||t.calendarLink.missing)return;
   e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);ignoreClick.current=null;e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,mode:'move-pending',pointerId:e.pointerId,originX:e.clientX,originY:e.clientY,originGridY:e.clientY-(grid.current?.getBoundingClientRect().top??0),pointer:{x:e.clientX,y:e.clientY}};
  };
  const keyboardSelection=(e:React.KeyboardEvent)=>{
-  const d=interaction.current;if(!d||d.mode!=='armed')return;
+  const d=interaction.current;
+  if(!d){
+   if(e.target!==grid.current||!canWrite||busyRef.current||creating||!onCreateTask||!['ArrowDown','ArrowUp','Enter',' '].includes(e.key))return;
+   e.preventDefault();e.stopPropagation();const point=calendarPoint.current??range.start;
+   if(e.key==='Enter'||e.key===' '){openCreation(selectionRange(point,point+1800000,range));return;}
+   calendarPoint.current=Math.max(range.start,Math.min(range.end-900000,point+(e.key==='ArrowDown'?900000:-900000)));updateGhost({...selectionRange(calendarPoint.current,calendarPoint.current+1800000,range),selecting:false});
+   const viewport=calendarViewport.current;if(viewport){const g=grid.current!.getBoundingClientRect(),v=viewport.getBoundingClientRect(),y=g.top+(calendarPoint.current-range.start)/(range.end-range.start)*g.height;if(y<v.top+12)viewport.scrollTop-=v.top+12-y;else if(y>v.bottom-12)viewport.scrollTop+=y-v.bottom+12;}return;
+  }
+  if(d.mode!=='armed')return;
   if(!['ArrowDown','ArrowUp','Enter',' '].includes(e.key))return;e.preventDefault();e.stopPropagation();
   const k=keyboard.current??{point:range.start,anchor:null};keyboard.current=k;
   if(e.key==='ArrowDown'||e.key==='ArrowUp')k.point=Math.max(range.start,Math.min(range.end,k.point+(e.key==='ArrowDown'?900000:-900000)));
@@ -144,8 +167,15 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   if(dockFrame.current){cancelAnimationFrame(dockFrame.current);dockFrame.current=0;dockFrom.current=null;path.current?.setAttribute('d','');setDocking(null);}
   if(selected&&selectedAnchor==='calendar')setSelected(null);
  };
+ const calendarHover=(e:React.PointerEvent)=>{
+  if(interaction.current||creating||!canWrite||busyRef.current||!onCreateTask||!active)return;
+  if((e.target as Element).closest('.planner-slot-add'))return;
+  if((e.target as Element).closest('.planner-event,button,input,select,textarea,a')){updateGhost(null);return;}
+  const rect=grid.current?.getBoundingClientRect();if(!rect)return;if(e.clientX<rect.left+40){updateGhost(null);return;}
+  const slot=hoverHourAt(e.clientY-rect.top,rect.height,range);calendarPoint.current=slot.start;updateGhost({...slot,selecting:false});
+ };
  const hours=Array.from({length:endHour-startHour+1},(_,i)=>startHour+i),allDay=s.events.filter((e:any)=>e.allDay&&e.start<range.end&&e.end>range.start);
- return <div className="task-workspace" data-active={isLayoutActive} data-connecting={linking||manipulating||busy||docking||undefined} ref={root} style={current&&!isLayoutActive?{minHeight:editorFloor}:undefined} onScrollCapture={e=>{if(e.target!==calendarViewport.current&&interaction.current)schedule();if(selected&&selectedAnchor==='task'&&(e.target as HTMLElement).classList.contains('task-list'))setSelected(null);}} onPointerOver={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');setHoveredTask(task?.dataset.linkedTask||null);}} onPointerLeave={()=>setHoveredTask(null)} onFocusCapture={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');setHoveredTask(task?.dataset.linkedTask||null);}} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setHoveredTask(null);}}>
+ return <div className="task-workspace" data-active={isLayoutActive} data-connecting={linking||manipulating||busy||docking||undefined} ref={root} style={current&&!isLayoutActive?{minHeight:editorFloor}:undefined} onScrollCapture={e=>{if(e.target!==calendarViewport.current&&interaction.current)schedule();if(selected&&selectedAnchor==='task'&&(e.target as HTMLElement).classList.contains('task-list'))setSelected(null);}} onPointerOver={pointerHover} onPointerMove={pointerHover} onPointerLeave={()=>hoverTask(null)} onFocusCapture={e=>{const task=(e.target as HTMLElement).closest<HTMLElement>('[data-linked-task]');hoverTask(task?.dataset.linkedTask||null);}} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))hoverTask(null);}}>
   <section className="task-checklist" ref={column}>
    <div className="todo-heading-row"><div className="todo-heading">{heading}</div><Button variant="secondary" size="sm" aria-expanded={active} aria-controls="planner-calendar" onClick={onToggle}>{active?<Minimize2 size={12}/>:<Maximize2 size={12}/>} {active?'Compact':'Expand'}</Button></div>
    {renderTasks(nodeForTask,(task:any)=>{clear();setSelectedAnchor('task');setSelected(task.id);},highlightedTask)}
@@ -154,17 +184,18 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
    <div className="planner-hours"><select aria-label="Day starts" value={startHour} onChange={e=>dispatch({type:'settings',patch:{plannerStart:+e.target.value}})}>{Array.from({length:endHour},(_,h)=><option key={h} value={h}>{plannerHourLabel(h,true)}</option>)}</select><span>–</span><select aria-label="Day ends" value={endHour} onChange={e=>dispatch({type:'settings',patch:{plannerEnd:+e.target.value}})}>{Array.from({length:24-startHour},(_,i)=>i+startHour+1).map(h=><option key={h} value={h}>{plannerHourLabel(h,true)}</option>)}</select></div>
    <div className="planner-calendar-scroll" ref={calendarViewport} tabIndex={0} role="region" aria-label="Scrollable day calendar" onScroll={calendarScrolled}>
    {allDay.length>0&&<div className="planner-all-day">{allDay.map((e:any)=><span key={e.id}>{e.title} · all day</span>)}</div>}
-   <div className={`planner-grid ${linking?'accepting-thread':''}`} ref={grid} tabIndex={linking?0:-1} aria-label="Drag a time span. With the keyboard, use arrows, Enter to start and Enter to save." onKeyDown={keyboardSelection} onPointerDownCapture={beginSelection}>
+   <div className={`planner-grid ${linking?'accepting-thread':''}`} ref={grid} tabIndex={canWrite?0:-1} aria-label="Day calendar. Drag empty space to add an event. Use arrows to choose a time and Enter to name it. When linking a task, Enter starts and saves the span." onKeyDown={keyboardSelection} onPointerDownCapture={beginSelection} onPointerMove={calendarHover} onPointerLeave={()=>{if(!interaction.current&&!creating)updateGhost(null);}}>
     {hours.map((h,i)=><div className="planner-hour" style={{top:`${i/(hours.length-1)*100}%`}} key={h}><span>{plannerHourLabel(h)}</span><i/></div>)}
-    {events.map((e:any)=>{const t=tasks.find((t:any)=>t.id===e.taskId),color=t?.calendarLink?.color||'#62a8ff';return <div ref={el=>{if(!e.taskId)return;if(el)blockRefs.current.set(e.taskId,el);else blockRefs.current.delete(e.taskId);}} data-linked-task={e.taskId} data-phase={e.phase} className={`planner-event ${highlightedTask===e.taskId?'is-connection-active':''} ${t?'linked-event':''} ${t?.done?'completed-event':''}`} key={e.id} style={{top:`${e.top*100}%`,height:`${e.height*100}%`,left:`calc(40px + (100% - 40px) * ${e.lane/e.lanes})`,width:`calc((100% - 40px) / ${e.lanes} - 3px)`,'--event-color':color} as React.CSSProperties}><button title={`${e.title} · ${clock(e.start)} – ${clock(e.end)}`} aria-label={`${e.title}, ${clock(e.start)} to ${clock(e.end)}`} draggable={false} onDragStart={ev=>ev.preventDefault()} onPointerDown={ev=>beginMove(ev,t)} onClick={ev=>{if(ignoreClick.current===e.taskId&&ev.detail!==0){ignoreClick.current=null;return;}if(linking)return;if(t){setSelectedAnchor('calendar');setSelected(t.id);}else notify(`${e.title} · ${clock(e.start)}–${clock(e.end)}. Edit this event in Calendar.`);}}><strong>{t?.done?'✓ ':''}{e.title}</strong>{e.end-e.start>=3600000&&<span>{clock(e.start)} – {clock(e.end)}</span>}</button>{t&&!busy&&!linking&&<button className="planner-resize" aria-label={`Resize ${e.title}`} title="Drag to change duration" onPointerDown={ev=>beginResize(ev,t)}/>}</div>;})}
+    {events.map((e:any)=>{const t=tasks.find((t:any)=>t.id===e.taskId),color=t?.calendarLink?.color||'#62a8ff';return <div ref={el=>{if(!e.taskId)return;if(el)blockRefs.current.set(e.taskId,el);else blockRefs.current.delete(e.taskId);}} data-linked-task={e.taskId} data-phase={e.phase} className={`planner-event ${highlightedTask===e.taskId?'is-connection-active':''} ${t?'linked-event':''} ${t?.done?'completed-event':''}`} key={e.id} style={{top:`${e.top*100}%`,height:`calc(${e.height*100}% - 1px)`,left:`calc(40px + (100% - 40px) * ${e.lane/e.lanes})`,width:`calc((100% - 40px) / ${e.lanes} - 3px)`,'--event-color':color} as React.CSSProperties}><button title={`${e.title} · ${clock(e.start)} – ${clock(e.end)}`} aria-label={`${e.title}, ${clock(e.start)} to ${clock(e.end)}`} draggable={false} onDragStart={ev=>ev.preventDefault()} onPointerDown={ev=>beginMove(ev,t)} onClick={ev=>{if(ignoreClick.current===e.taskId&&ev.detail!==0){ignoreClick.current=null;return;}if(linking)return;if(t){setSelectedAnchor('calendar');setSelected(t.id);}else notify(`${e.title} · ${clock(e.start)}–${clock(e.end)}. Edit this event in Calendar.`);}}><strong>{t?.done?'✓ ':''}{e.title}</strong>{e.end-e.start>=3600000&&<span>{clock(e.start)} – {clock(e.end)}</span>}</button>{t&&!busy&&!linking&&<button className="planner-resize" aria-label={`Resize ${e.title}`} title="Drag to change duration" onPointerDown={ev=>beginResize(ev,t)}/>}</div>;})}
     {now>range.start&&now<range.end&&<div className="planner-now" style={{top:`${(now-range.start)/(range.end-range.start)*100}%`}}><i/></div>}
-    {ghost&&<div className="planner-ghost" data-selecting={ghost.selecting} style={{top:`${(ghost.start-range.start)/(range.end-range.start)*100}%`,height:`${(ghost.end-ghost.start)/(range.end-range.start)*100}%`}}/>}
+    {ghost&&<div className="planner-ghost" ref={ghostAnchor} data-selecting={ghost.selecting} style={{top:`${(ghost.start-range.start)/(range.end-range.start)*100}%`,height:`${(ghost.end-ghost.start)/(range.end-range.start)*100}%`}}>{!ghost.selecting&&!linking&&onCreateTask&&<button type="button" className="planner-slot-add" aria-label={`Add event at ${clock(ghost.start)}`} title="Add event" onClick={()=>openCreation({start:ghost.start,end:ghost.end})}><Plus size={13}/></button>}</div>}
    </div>
    {!canWrite&&<div className="planner-connect"><p>{info.status==='authorized'?'Select a writable calendar in Preferences to start planning.':'Connect Mac Calendar to start planning.'}</p><Button size="sm" variant="secondary" onClick={()=>{host('calendarConnect');notify('Choose your calendar in Preferences.');}}>Connect calendar</Button></div>}
    </div>
   </section>
   {error&&<div className="planner-error" role="alert">{error}<button aria-label="Dismiss error" onClick={()=>setError('')}><X size={12}/></button></div>}
-  <svg className="planner-thread" aria-hidden="true">{isLayoutActive&&connections.map(c=><path className={`saved-thread ${highlightedTask===c.taskId?'is-active':''}`} data-task-id={c.taskId} key={c.taskId} d={c.d} style={{visibility:linking===c.taskId||docking===c.taskId?'hidden':undefined}}/>)}<path className="loose-thread" ref={path}/><g ref={tip} visibility="hidden"><circle r="7"/><path d="M -3 0 H 3 M 0 -3 V 3"/></g></svg>
+  <svg className="planner-thread" aria-hidden="true">{isLayoutActive&&connections.map(c=>{const hidden=linking===c.taskId||docking===c.taskId?'hidden':undefined;return <React.Fragment key={c.taskId}><path className={`saved-thread ${highlightedTask===c.taskId?'is-active':''}`} data-task-id={c.taskId} d={c.d} style={{visibility:hidden}}/><path className="saved-thread-hit" data-task-id={c.taskId} d={c.d} style={{visibility:hidden}}/><circle className={`saved-thread-endpoint ${highlightedTask===c.taskId?'is-active':''}`} data-task-id={c.taskId} cx={c.targetX} cy={c.targetY} r="3" style={{visibility:hidden}}/></React.Fragment>;})}<path className="loose-thread" ref={path}/><g ref={tip} visibility="hidden"><circle r="7"/><path d="M -3 0 H 3 M 0 -3 V 3"/></g></svg>
+  {creating&&isLayoutActive&&<NewEventComposer slot={creating} root={root} anchor={()=>ghostAnchor.current} onCreate={createCalendarTask} onClose={closeCreation}/>}
   {current&&(isLayoutActive||selectedAnchor==='task')&&<EventDetails key={current.id} task={current} now={now} busy={!!busy} root={root} constrainToPanel={isLayoutActive} anchor={()=>selectedAnchor==='task'?nodeRefs.current.get(current.id)?.closest<HTMLElement>('.task-row'):blockRefs.current.get(current.id)} onReserveHeight={(height:number)=>{if(!isLayoutActive)setEditorFloor(height);}} isTaskPresent={()=>latest.current.tasks.some((task:any)=>task.id===current.id)} onClose={()=>setSelected(null)} onSave={async(values:any)=>{if(validSlot(values.start,values.end)){const result=await submit({...current,title:values.title},values);if(result?.ok)dispatch({type:'edit',id:current.id,title:values.title});return result;}dispatch({type:'edit',id:current.id,title:values.title});return {ok:true,title:values.title};}} onUnlink={()=>submit(current,{},'remove')} onColor={(color:string)=>dispatch({type:'taskCalendarColor',id:current.id,color})} onPriority={(priority:string)=>dispatch({type:'taskPriority',id:current.id,priority})}/>}
  </div>;
 }

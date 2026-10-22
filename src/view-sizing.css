@@ -31,7 +31,7 @@
 }
 
 /* The two planner columns share a viewport, never a scroll position. */
-.app-shell[data-view=tasks][data-planning=true].is-open .view-scroll{
+.app-shell[data-view=tasks]:is([data-planning=true],[data-planner-contracting=true]).is-open .view-scroll{
  display:flex;
  flex-direction:column;
  overflow:visible;
