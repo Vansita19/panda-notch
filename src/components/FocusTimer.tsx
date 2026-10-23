@@ -4,6 +4,7 @@ import {Clock3,Leaf,Minus,Pause,Play,Plus,RotateCcw} from 'lucide-react';
 import {Button} from '../arc/button/button';
 import {durations,stepTimerMinutes} from '../model.mjs';
 import {durationParts,minutesFromDurationParts,stepDurationPart,focusModeOnEntry,focusElapsed,durationReelSteps,createDurationWheelGesture} from '../focus-duration.mjs';
+import './secondary-tabs.css';
 import './focus-timer.css';
 
 type Unit='hours'|'minutes';
@@ -66,7 +67,7 @@ export function FocusTimer({s,seconds,dispatch,onStart}:any){
  const adjust=(delta:number,source:InputSource)=>applyMinutes(stepTimerMinutes(flushWheels()??candidate??configured,delta),source);
  const start=()=>{if(s.timer.running){dispatch({type:'timerPause'});return;}const wheelValue=flushWheels();if(!active&&wheelValue===null&&!commit())return;dispatch({type:'timerStart'});onStart?.();};
  return <div className={`focus-view focus-dial-view ${s.timer.running?'is-running':''}`} data-focus-mode={mode.id} data-reduced-motion={reducedMotion||undefined}>
-  <div className="focus-mode-options" role="group" aria-label="Timer mode">{modes.map(item=><button type="button" key={item.id} className="focus-mode-option" data-mode={item.id} aria-pressed={item.id===mode.id} onClick={()=>{flushWheels();if(item.id!==mode.id)dispatch({type:'timerMode',mode:item.id});}}><item.Icon size={15} strokeWidth={1.8}/><span>{item.label}</span></button>)}</div>
+  <div className="focus-mode-options secondary-tabs" role="group" aria-label="Timer mode">{modes.map(item=><button type="button" key={item.id} className="focus-mode-option" data-mode={item.id} aria-pressed={item.id===mode.id} onClick={()=>{flushWheels();if(item.id!==mode.id)dispatch({type:'timerMode',mode:item.id});}}><item.Icon size={15} strokeWidth={1.8}/><span>{item.label}</span></button>)}</div>
   <div className="focus-dial"><div className="focus-dial-well"/>
    <svg className="focus-dial-light" viewBox="0 0 240 240" role="progressbar" aria-label="Session progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress*100)}>
     <defs><radialGradient id={`focus-glow-${id}`} gradientUnits="userSpaceOnUse" cx="120" cy="120" r="111"><stop offset="0" stopColor="var(--focus-accent)" stopOpacity="0"/><stop offset=".58" stopColor="var(--focus-accent)" stopOpacity=".035"/><stop offset="1" stopColor="var(--focus-accent)" stopOpacity=".34"/></radialGradient></defs>

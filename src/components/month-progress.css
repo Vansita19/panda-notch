@@ -1,7 +1,3 @@
-.todo-period-switch{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--panda-border-subtle);border-radius:8px;background:var(--panda-surface-recessed)}
-.todo-period-switch>button{min-height:23px;padding:3px 8px;border-radius:5px;background:transparent;color:var(--panda-text-muted);font-size:10px;line-height:16px;font-weight:500;white-space:nowrap}
-.todo-period-switch>button[aria-pressed=true]{background:var(--panda-surface-selected);box-shadow:var(--panda-control-shadow);color:var(--panda-text-primary)}
-.todo-period-switch>button:focus-visible{outline:2px solid var(--panda-focus);outline-offset:-2px}
 .month-period-heading{min-height:29px;margin-bottom:10px}
 .month-task-progress{width:100%;min-width:0;padding:1px 0 0}
 .month-progress-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}

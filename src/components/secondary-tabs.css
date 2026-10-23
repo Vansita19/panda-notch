@@ -1,0 +1,10 @@
+/* Inner navigation follows the quiet underline pattern from the Panda Figma file. */
+.secondary-tabs{display:inline-flex;align-items:stretch;gap:1px;padding:0;border:0;border-bottom:1px solid #f2f2f217;border-radius:0;background:transparent;box-shadow:none}
+.secondary-tabs>button{position:relative;display:flex;align-items:center;justify-content:center;min-height:27.5px;padding:6px 8.75px;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--panda-text-subtle);font-size:10px;font-weight:510;line-height:14px;white-space:nowrap;touch-action:manipulation;transition:color 140ms ease}
+.secondary-tabs>button:after{content:"";position:absolute;inset:auto 0 -1px;height:1px;background:var(--panda-text-primary);opacity:0;transform:scaleX(.94);transition:opacity 160ms ease,transform 160ms ease;pointer-events:none}
+.secondary-tabs>button[aria-pressed=true]{color:var(--panda-text-primary)}
+.secondary-tabs>button[aria-pressed=true]:after{opacity:1;transform:scaleX(1)}
+.secondary-tabs>button:focus-visible{outline:2px solid var(--panda-focus);outline-offset:2px}
+@media(hover:hover){.secondary-tabs>button:hover{color:var(--panda-text-primary)}}
+@media(prefers-reduced-motion:reduce){.secondary-tabs>button,.secondary-tabs>button:after{transition:none}}
+[data-reduced=true] .secondary-tabs>button,[data-reduced=true] .secondary-tabs>button:after{transition:none}

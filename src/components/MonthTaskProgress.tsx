@@ -3,6 +3,7 @@ import {ChevronLeft,ChevronRight} from 'lucide-react';
 import {Button} from '../arc/button/button';
 import {dayKey} from '../model.mjs';
 import {getTaskDayProgress,monthGrid} from '../month-progress.mjs';
+import './secondary-tabs.css';
 import './month-progress.css';
 
 const weekdays=[['Mon','Monday'],['Tue','Tuesday'],['Wed','Wednesday'],['Thu','Thursday'],['Fri','Friday'],['Sat','Saturday'],['Sun','Sunday']];
@@ -10,7 +11,7 @@ const monthLabel=new Intl.DateTimeFormat(undefined,{month:'long',year:'numeric'}
 const dateLabel=new Intl.DateTimeFormat(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 const circumference=2*Math.PI*13.5;
 export type TodoPeriod='today'|'month';
-export function TodoPeriodSwitch({value,onChange}:{value:TodoPeriod;onChange:(value:TodoPeriod)=>void}){return <div className="todo-period-switch" role="group" aria-label="Task period">{([['today','Today'],['month','This Month']] as const).map(([id,label])=><button key={id} type="button" tabIndex={0} aria-pressed={value===id} onClick={()=>onChange(id)}>{label}</button>)}</div>;}
+export function TodoPeriodSwitch({value,onChange}:{value:TodoPeriod;onChange:(value:TodoPeriod)=>void}){return <div className="todo-period-switch secondary-tabs" role="group" aria-label="Task period">{([['today','Today'],['month','This Month']] as const).map(([id,label])=><button key={id} type="button" tabIndex={0} aria-pressed={value===id} onClick={()=>onChange(id)}>{label}</button>)}</div>;}
 const isoDay=(stamp:number)=>{const date=new Date(stamp);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;};
 type DayProgress={done:number;total:number|null;created?:number}|null;
 const DayTile=memo(function DayTile({cell,progress,today}:{cell:{date:number;key:string;day:number;inMonth:boolean};progress:DayProgress;today:boolean}){

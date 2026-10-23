@@ -4,7 +4,7 @@
 .visual { position: relative; display: block; width: 18px; height: 18px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface); transition: border-color var(--duration-fast) var(--ease-standard), transform var(--duration-spring) var(--ease-spring); }
 .fill { position: absolute; inset: -1px; border-radius: inherit; background: var(--control-on); }
 .mark { position: absolute; inset: -1px; width: 18px; height: 18px; overflow: visible; }
-.box[data-state="checked"] .visual, .box[data-state="indeterminate"] .visual { border-color: var(--control-on); }
+.box[data-state="checked"] .visual, .box[data-state="indeterminate"] .visual { border-color: var(--control-border-on, var(--control-on)); }
 @media (hover: hover) and (pointer: fine) { .box[data-state="unchecked"]:hover:not(:disabled) .visual { border-color: var(--text-muted); } }
 .box:active:not(:disabled) .visual { transform: scale(.95); transition: border-color var(--duration-fast) var(--ease-standard), transform var(--duration-instant) var(--ease-standard); }
 .box:disabled { opacity: .5; cursor: not-allowed; }

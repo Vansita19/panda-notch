@@ -15,20 +15,23 @@ function visit(node){
 }
 visit(ast);assert.equal(renderers.size,2,'The fixture must exercise App’s actual taskMeta and row renderers');
 const bundled=await build({stdin:{contents:`
- const motion={div:'task-row'},Checkbox='checkbox',InlineTaskName='task-name-input',TaskPriority='task-priority',X='delete-icon';
+ import {TaskPriority} from './src/components/TaskPriority';
+ const motion={div:'task-row'},Checkbox='checkbox',InlineTaskName='task-name-input',X='delete-icon';
+ export const renderPriority=props=>TaskPriority(props);
  export function renderLinkedRow(task,{planning,planningLayout,planningContracting}){
   const dispatch=()=>{},complete=()=>{},remove=()=>{},setPlannerExpanded=()=>{},setDrag=()=>{},renameTask=()=>{};
   const renamingTask=null,drag=null,s={tasks:[task]},clock=()=> '9:00 AM';
   const taskMeta=${renderers.get('taskMeta')};
   const row=${renderers.get('row')};
-  return row(task);
- }`,sourcefile:'task-row-fixture.tsx',loader:'tsx'},bundle:true,write:false,platform:'node',format:'esm',jsx:'automatic',plugins:[{
+  return row(task,undefined,{type:'edit-control',props:{}});
+ }`,sourcefile:'task-row-fixture.tsx',loader:'tsx',resolveDir:new URL('..',import.meta.url).pathname},bundle:true,write:false,platform:'node',format:'esm',jsx:'automatic',plugins:[{
  name:'composition-jsx',setup(builder){
   builder.onResolve({filter:/^react\/jsx-runtime$/},()=>({path:'jsx-runtime',namespace:'fixture'}));
-  builder.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const jsx=(type,props,key)=>({type,props,key:key??null});export const jsxs=jsx;'}));
+  builder.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const Fragment="fragment";export const jsx=(type,props,key)=>({type,props,key:key??null});export const jsxs=jsx;'}));
+  builder.onLoad({filter:/\.css$/},()=>({contents:'',loader:'js'}));
  }
 }]});
-const {renderLinkedRow}=await import('data:text/javascript;base64,'+Buffer.from(bundled.outputFiles[0].text).toString('base64'));
+const {renderLinkedRow,renderPriority}=await import('data:text/javascript;base64,'+Buffer.from(bundled.outputFiles[0].text).toString('base64'));
 const task={id:'linked-task',title:'Prepare a portfolio presentation with a long descriptive task title',priority:'medium',done:false,calendarLink:{start:1000,end:3601000,missing:false}};
 const phases=[
  ['expanded',{planning:true,planningLayout:true,planningContracting:false}],
@@ -65,4 +68,25 @@ test('expanded timing is hidden from assistive technology while compact timing i
  assert.ok(expanded,'Expanded rows keep their timing node mounted');
  assert.equal(expanded.node.props['aria-hidden'],true);
  assert.ok(compact);assert.notEqual(compact.node.props['aria-hidden'],true);
+});
+
+test('priority is anchored outside the moving timing and reveal containers in every planner phase',()=>{
+ for(const [phase,state] of phases){
+  const row=renderLinkedRow(task,state),priority=find(row,'task-row-priority'),metadata=find(row,'task-meta'),actions=find(row,'row-actions');
+  assert.ok(priority,`${phase} must render the stable priority control`);
+  assert.equal(priority.path.length,1,'The control is anchored directly to the task row');
+  assert.equal(find(metadata.node,'task-row-priority'),null,'Timing translations cannot move the priority hit area');
+  assert.equal(find(actions.node,'task-row-priority'),null,'Revealing actions cannot move the priority hit area');
+  assert.match(actions.node.props.children[0].props['aria-label'],/^Delete /);
+  assert.equal(actions.node.props.children[1].type,'edit-control','Actions run cross, pencil, then the fixed priority');
+ }
+});
+
+test('clicking the actual priority control changes its value without bubbling into calendar navigation',()=>{
+ for(const [priority,next] of [['low','medium'],['medium','high'],['high','low']]){
+  const changes=[];let stopped=false;
+  const control=renderPriority({priority,onChange:value=>changes.push(value)});
+  control.props.onClick({stopPropagation(){stopped=true;}});
+  assert.equal(stopped,true);assert.deepEqual(changes,[next]);
+ }
 });

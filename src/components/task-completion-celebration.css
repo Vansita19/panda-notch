@@ -1,0 +1,11 @@
+.task-completion-celebration{position:absolute;inset:0;z-index:9;pointer-events:none;overflow:hidden;border-radius:inherit}
+.task-completion-wash{position:absolute;inset:1px;border:1px solid var(--panda-success);border-radius:inherit;background:linear-gradient(180deg,#7af2a006,transparent 50%,#7af2a00d);box-shadow:inset 0 0 22px #7af2a012;animation:task-completion-wash 2.2s cubic-bezier(.22,1,.36,1) both}
+.task-completion-confetti{position:absolute;left:50%;top:21%;width:4px;height:7px;border-radius:1px;background:var(--panda-success);opacity:0;animation:task-completion-confetti 1.7s cubic-bezier(.16,.7,.25,1) var(--confetti-delay) both}
+.task-completion-confetti:nth-child(3n){width:4px;height:4px;border-radius:50%;background:var(--panda-text-primary)}
+.task-completion-confetti:nth-child(3n + 1){background:#b9f4c9}
+@keyframes task-completion-wash{0%{opacity:0}18%,64%{opacity:.4}100%{opacity:0}}
+@keyframes task-completion-confetti{0%{opacity:0;transform:translate3d(0,0,0) rotate(0deg) scale(.6)}12%{opacity:.9}70%{opacity:.65}100%{opacity:0;transform:translate3d(var(--confetti-x),var(--confetti-y),0) rotate(var(--confetti-turn)) scale(.8)}}
+.task-completion-celebration[data-still] .task-completion-wash{animation:none;opacity:.3}
+[data-reduced=true] .task-completion-confetti{display:none}
+[data-reduced=true] .task-completion-wash{animation:none;opacity:.3}
+@media(prefers-reduced-motion:reduce){.task-completion-confetti{display:none}.task-completion-wash{animation:none;opacity:.3}}

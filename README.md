@@ -62,16 +62,20 @@ A divider separates the Menu cards from one compact gray Upcoming card. It shows
 
 To-Do, All links, Ideas, and Reminders fit their content when opened, up to the available screen height. Longer content scrolls. Manually resizing the current view keeps that height until the next view entry; the saved width remains available.
 
+Inner selectors use a quiet underline instead of filled tabs: **Today / This Month** and **Work / Short break / Long break** share the same faint divider, muted labels, and thin active underline. Main navigation retains its raised slot style.
+
 ### Expand the task calendar
 In **To-Do → Today**, add your to-dos, then choose **Expand** or click a task to reveal today’s calendar beside the same list. Click a task’s dot, move to the calendar, and drag from the start time to the end time. Hover previews are dotted; selecting fills the span blue. You can drag in either direction; intervals use 15-minute steps. Press Escape to cancel a selection before saving. Connected tasks are saved in the selected writable Mac calendar. Saved tasks remain connected to their calendar blocks by quiet gray threads; hovering a thread highlights its task, event, and both endpoints in blue. A hairline gap separates neighboring event blocks, including those with the same color. Drag a block’s body to move it while keeping its duration, or its bottom edge to resize it. Choose **Compact** to return to the checklist with scheduled times beside task names.
 
 You can also start on the calendar: hover empty space for a plus, drag a time span, and name the new event in the small inline field. Panda adds its matching task, then saves the event to the connected calendar. If Calendar cannot save, the named task stays available without a scheduled time.
 
+Completed tasks have solid green checkboxes with white ticks. Finishing the last unfinished task gives a brief green celebration and an **All done for today** confirmation with Undo. It happens only on a checkbox completion, never on launch or calendar sync. Reduced motion keeps the confirmation and a still highlight without confetti.
+
 Expand and Compact use one interruptible transition: the calendar fades and slides right on closing while the checklist returns to the center. Its scroll viewport stays intact until the fade ends, including when a smaller display limits the expanded width. Scheduled labels keep their layout space while hidden in the expanded view, then fade back in without rewrapping the rows during Compact.
 
-The expanded planner gives equal space to tasks and calendar. Task names stay left and priority signals stay at the right edge. Scheduled times appear beside tasks only in Compact; the expanded calendar already shows each event’s time. Metadata slides left to reveal edit and delete controls on hover or keyboard focus. Long names and metadata wrap when needed.
+The expanded planner gives equal space to tasks and calendar. Task names stay left and priority signals stay fixed at the right edge, including during hover and keyboard focus. Scheduled times appear beside tasks only in Compact; the expanded calendar already shows each event’s time. Hover reveals the pencil immediately to the left of priority, with the delete cross farther inward. Only the timing moves to make room. Long names and metadata wrap when needed.
 
-Panda’s neutral surfaces, selected controls, text, borders, and focus indicators share one gray palette in `src/panda-colors.css`. Main navigation, Today/This Month, Focus controls, calendar controls, and popovers use the same selected-surface gradient. Event colors, priority signals, Focus mode icons/progress, and Menu artwork retain their distinct meanings.
+Panda’s neutral surfaces, selected controls, text, borders, and focus indicators share one gray palette in `src/panda-colors.css`. Main navigation, calendar controls, and popovers use the same selected-surface gradient; secondary selectors use underlines. Event colors, completion checks, priority signals, Focus mode icons/progress, and Menu artwork retain their distinct meanings.
 
 The right calendar scrolls independently of the left checklist, with the hour-range controls kept in place. Long checklists can scroll separately too. Threads follow visible blocks and disappear when either endpoint is outside its column; scrolling does not rerender the task list. Calendar hour labels and range controls use a 12-hour AM/PM clock. Click a task's priority signal to cycle Low (green), Medium (yellow), and High (red) without opening its calendar.
 

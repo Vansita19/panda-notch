@@ -3,11 +3,10 @@
 .focus-view.focus-dial-view{--focus-accent:#98c98a;width:100%;max-width:320px;margin:0 auto;padding:1px 0 4px;display:flex;flex-direction:column;align-items:center}
 .focus-dial-view[data-focus-mode="short"]{--focus-accent:#ddc171}
 .focus-dial-view[data-focus-mode="long"]{--focus-accent:#dc8d88}
-.focus-mode-options{display:flex;gap:6px;width:100%;margin-bottom:16px}
-.focus-mode-option{--mode-accent:#98c98a;display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-width:0;min-height:40px;padding:8px 6px;border:1px solid var(--panda-border-subtle);border-radius:9px;background:var(--panda-surface-recessed);color:var(--panda-text-muted);font-size:10px;font-weight:550;cursor:pointer;touch-action:manipulation}
+.focus-mode-options{width:100%;margin-bottom:16px}
+.focus-mode-option{--mode-accent:#98c98a;gap:6px;flex:1;min-width:0;cursor:pointer}
 .focus-mode-option[data-mode="short"]{--mode-accent:#ddc171}.focus-mode-option[data-mode="long"]{--mode-accent:#dc8d88}
 .focus-mode-option svg{flex-shrink:0;color:var(--mode-accent)}
-.focus-mode-option[aria-pressed="true"]{background:var(--panda-surface-selected);border-color:var(--panda-border);color:var(--panda-text-primary);box-shadow:var(--panda-control-shadow)}
 .focus-mode-option:focus-visible,.focus-roller-number:focus-visible,.focus-roller-input:focus-visible{outline:2px solid var(--panda-focus);outline-offset:2px}
 .focus-dial{position:relative;width:236px;aspect-ratio:1;border-radius:50%;isolation:isolate;margin:0 0 19px;background:radial-gradient(ellipse at 46% 31%,var(--panda-surface-raised) 0,var(--panda-surface-recessed) 38%,var(--panda-surface-inset) 65%,var(--panda-surface-shadow) 78%);box-shadow:0 1px 1px #ffffff48 inset,1px 0 1px #ffffff1b inset,-1px -2px 2px #000e inset,0 9px 22px #0008,0 0 0 1px #ffffff08}
 .focus-dial:before{content:"";position:absolute;inset:7px;border-radius:50%;box-shadow:0 1px 4px #000c inset,0 -1px 1px #ffffff10 inset;background:radial-gradient(circle,var(--panda-surface-inset) 49%,var(--panda-surface-recessed) 75%,var(--panda-surface-recessed) 100%);z-index:0}
@@ -34,7 +33,7 @@
 .focus-duration-stepper button{min-width:0;min-height:32px;height:32px;padding:0;border-radius:0;color:var(--panda-text-muted)}.focus-duration-stepper button:first-child{border-right:1px solid #ffffff0c}.focus-duration-stepper button:last-child{border-left:1px solid #ffffff0c}.focus-duration-stepper button:disabled{opacity:.25}
 .focus-dial-view .focus-main-action{width:100%;min-height:37px;height:37px;margin-top:8px;padding:8px 12px;justify-content:center;gap:7px;border:1px solid var(--panda-border);border-radius:9px;background:var(--panda-surface-selected);color:var(--panda-text-primary);font-size:12px;font-weight:600;box-shadow:var(--panda-control-shadow)}
 .focus-dial-view .focus-main-action:disabled{opacity:.4}.focus-dial-view .focus-reset-action{min-height:22px;height:22px;padding:2px 6px;margin-top:8px;gap:5px;color:var(--panda-text-muted);font-size:9px}
-@media(hover:hover){.focus-mode-option:hover{color:var(--panda-text-primary);background-color:var(--panda-surface)}.focus-roller-number:hover{color:#fff}.focus-dial-view .focus-main-action:not(:disabled):hover{filter:brightness(1.08)}}
+@media(hover:hover){.focus-roller-number:hover{color:#fff}.focus-dial-view .focus-main-action:not(:disabled):hover{filter:brightness(1.08)}}
 @media(max-width:380px){.focus-mode-options{margin-bottom:12px}.focus-dial{width:206px;margin-bottom:14px}.focus-dial-well{inset:28px}.focus-dial-center{inset:35px 12px 28px}}
 .focus-dial-view[data-reduced-motion] .focus-elapsed-fill,.focus-dial-view[data-reduced-motion] .focus-elapsed-edge{transition:none}
 @media(prefers-reduced-motion:reduce){.focus-dial-view *{scroll-behavior:auto!important}.is-running .focus-elapsed-fill,.is-running .focus-elapsed-edge{transition:none}}
