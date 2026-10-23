@@ -19,7 +19,7 @@
 .focus-duration-rollers,.focus-countdown{display:flex;align-items:center;justify-content:center;gap:0;width:100%;font-variant-numeric:tabular-nums}
 .focus-duration-unit{width:65px;flex-shrink:0;text-align:center}
 .focus-roller-track{height:100px;position:relative;overflow:hidden;cursor:ns-resize;overscroll-behavior:contain;mask-image:linear-gradient(transparent,rgba(0,0,0,.18) 12%,#000 37%,#000 63%,rgba(0,0,0,.18) 88%,transparent)}
-.focus-roller-number{position:absolute;inset:0;display:block;width:65px;height:100px;margin:0;padding:0;border:0;border-radius:5px;background:transparent;color:var(--panda-text-primary);cursor:ns-resize;overflow:hidden}
+.focus-roller-number{position:absolute;inset:0;display:block;width:65px;height:100px;margin:0;padding:0;border:0;border-radius:5px;background:transparent;color:var(--panda-text-primary);cursor:ns-resize;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 .focus-number-reel{position:absolute;left:0;top:0;width:65px;pointer-events:none;text-align:center;font-variant-numeric:tabular-nums}
 .focus-reel-row{display:block;width:65px;height:42px;line-height:42px;font-size:45px;font-weight:280;letter-spacing:-1.7px}
 .focus-roller-input{position:absolute;top:29px;left:0;display:block;width:65px;height:42px;margin:0;padding:0;border:0;border-radius:5px;background:transparent;color:var(--panda-text-primary);text-align:center;font-size:45px;font-weight:280;line-height:42px;letter-spacing:-1.7px;font-variant-numeric:tabular-nums;cursor:text;outline:none;box-shadow:0 -1px 0 #ffffff18 inset}
