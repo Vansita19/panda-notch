@@ -124,7 +124,7 @@ export default function App(){
   const panel=layout.current,workspace=panel?.querySelector<HTMLElement>('.task-workspace'),heading=workspace?.querySelector<HTMLElement>('.todo-heading-row'),list=workspace?.querySelector<HTMLElement>('.task-list');
   if(!panel||!workspace||!heading||!list)return panel?.offsetHeight||0;
   const shell=panel.closest<HTMLElement>('.app-shell'),availableHeight=parseFloat(getComputedStyle(panel).getPropertyValue('--screen-height'));
-  return compactPaintHeight.current=plannerCompactHeight({panelHeight:panel.offsetHeight,workspaceHeight:workspace.offsetHeight,headingHeight:heading.offsetHeight,headingGap:parseFloat(getComputedStyle(heading).marginBottom),listHeight:list.scrollHeight,availableHeight,manualHeight:shell?.dataset.manualHeight==='true'?panel.offsetHeight:undefined});
+  return compactPaintHeight.current=plannerCompactHeight({panelHeight:panel.offsetHeight,workspaceHeight:workspace.offsetHeight,headingHeight:heading.offsetHeight,headingGap:parseFloat(getComputedStyle(heading).marginBottom),listHeight:list.scrollHeight,minimumListHeight:parseFloat(getComputedStyle(workspace).getPropertyValue('--task-list-min-height')),availableHeight,manualHeight:shell?.dataset.manualHeight==='true'?panel.offsetHeight:undefined});
  },[]);
  // Cancel old effects only after the target CSS layout exists, before measuring it.
  useLayoutEffect(()=>{plannerMotion.current?.prepare();},[planning,planningLayout,planningContracting]);

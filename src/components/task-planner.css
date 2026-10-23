@@ -1,10 +1,10 @@
 /* Both halves share the available width; Compact retains this layout until its clip settles. */
-.task-workspace{--task-action-reveal:52px;position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0;color:var(--panda-text-primary);font-size:12px;isolation:isolate}
+.task-workspace{--task-action-reveal:52px;--task-list-min-height:156px;position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0;color:var(--panda-text-primary);font-size:12px;isolation:isolate}
 .task-checklist{width:min(var(--task-column-width,364px),100%);min-width:0;align-self:start;position:relative;z-index:2}
 .task-workspace[data-active=true]{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
 .task-workspace[data-active=true]>.task-checklist{width:100%}
 .app-shell[data-planning=true] .view-scroll{overflow-y:auto;overflow-x:clip;min-height:0}
-.task-workspace .task-row{position:relative;overflow:visible;border-radius:8px;background:transparent;transition:background-color 120ms ease}
+.task-workspace .task-row{position:relative;gap:2px;overflow:visible;border-radius:8px;background:transparent;transition:background-color 120ms ease}
 .task-workspace .task-row:not(.add-todo-row):hover,.task-workspace .task-row:not(.add-todo-row):focus-within{background:var(--panda-surface-recessed);box-shadow:inset 0 0 0 1px #ffffff0a}
 .todo-heading-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px}
 .todo-heading-row .todo-heading{margin:0}.todo-heading-row>button{font-size:10px!important}
@@ -14,7 +14,10 @@
 .thread-node:hover span,.thread-node[aria-pressed=true] span{background:var(--panda-control-on)}
 .thread-node:disabled{opacity:.3;cursor:not-allowed}
 .planner-day{min-width:0;align-self:start;padding:0 0 10px;background:none;border:0;border-radius:0;position:relative}
-.task-workspace[data-active=false]>.planner-day{position:absolute;left:calc(var(--task-column-width,364px) + 36px);width:294px;top:0;visibility:hidden;opacity:0;pointer-events:none}
+/* Retain calendar state without extending the compact scroll area. During the
+   exit animation data-active stays true until the calendar has faded out. */
+.task-workspace[data-active=false]>.planner-day{display:none}
+.task-workspace[data-active=false] .task-list{min-height:var(--task-list-min-height)}
 .planner-hours{display:flex;align-items:center;justify-content:flex-end;gap:7px;color:var(--panda-text-muted);margin:0 0 23px;min-height:24px;font-size:10px}
 .planner-hours select,.planner-calendar-choice select{min-width:0;border:0;background:var(--panda-surface-recessed);padding:4px 15px 4px 6px;border-radius:5px;font-size:10px;color:var(--panda-text-secondary)}
 .planner-grid{height:440px;position:relative;isolation:isolate;margin-right:2px;touch-action:none;outline-offset:5px}

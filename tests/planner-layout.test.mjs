@@ -13,6 +13,14 @@ test('a long scrolling list uses its full content height then stops at the displ
  assert.equal(plannerCompactHeight({...measured,availableHeight:800}),800);
  assert.equal(plannerCompactHeight({...measured,availableHeight:2000}),1363);
 });
+test('empty and short checklists keep the same four-row floor while compacting',async()=>{
+ const {plannerCompactHeight}=await import('../src/planner-layout.mjs');
+ const measured={panelHeight:612,workspaceHeight:487,headingHeight:28,headingGap:10,minimumListHeight:156,availableHeight:800};
+ assert.equal(plannerCompactHeight({...measured,listHeight:38}),319);
+ assert.equal(plannerCompactHeight({...measured,listHeight:115}),319);
+ assert.equal(plannerCompactHeight({...measured,listHeight:240}),403);
+ assert.equal(plannerCompactHeight({...measured,listHeight:38,availableHeight:280}),280);
+});
 test('manual height wins over checklist content while respecting the available screen',async()=>{
  const {plannerCompactHeight}=await import('../src/planner-layout.mjs');
  const measured={panelHeight:612,workspaceHeight:487,headingHeight:28,headingGap:10,listHeight:160,availableHeight:800};
