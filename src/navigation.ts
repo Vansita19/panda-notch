@@ -1,6 +1,7 @@
 // View IDs stay stable so calendar, task, and capture shortcuts keep their destinations.
 export const featureViews=[
  {id:'tasks',title:'To-Do',tabLabel:'To-Do'},
+ {id:'tracker',title:'Tracker',tabLabel:'Tracker'},
  {id:'focus',title:'Focus',tabLabel:'Focus'},
  {id:'pins',title:'All links',tabLabel:'All links'},
  {id:'dump',title:'Ideas',tabLabel:'Ideas'},

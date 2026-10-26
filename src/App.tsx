@@ -10,6 +10,7 @@ import {TaskPlanner} from './components/TaskPlanner';
 import {MonthTaskProgress,TodoPeriodSwitch,type TodoPeriod} from './components/MonthTaskProgress';
 import {TaskPriority} from './components/TaskPriority';
 import {InlineTaskName} from './components/InlineTaskName';
+import {Tracker} from './components/Tracker';
 import {TaskCompletionCelebration} from './components/TaskCompletionCelebration';
 import {finishesVisibleTasks,taskCelebrationMs} from './task-completion.mjs';
 import {renameTaskWithCalendar} from './task-rename.mjs';
@@ -217,6 +218,7 @@ export default function App(){
  tab==='today'?<MenuHome onNavigate={navigate} events={s.events} now={now} eventColor={event=>s.tasks.find((task:any)=>task.calendarLink?.eventId===event.eventId&&task.calendarLink?.calendarId===event.calendarId)?.calendarLink?.color} onOpenCalendar={()=>{if(native)host('openCalendarApp');else notify('Open Panda on your Mac to view this event in Calendar.');}}/>:
  tab==='tasks'?(todoPeriod==='month'?<MonthTaskProgress s={s} now={now} heading={<TodoPeriodSwitch value={todoPeriod} onChange={changeTodoPeriod}/>}/>:<TaskPlanner onDeleteTask={remove} onDeleteCalendarTime={removeCalendarTime} editingTask={renamingTask} onCreateTask={createCalendarTask} heading={<TodoPeriodSwitch value={todoPeriod} onChange={changeTodoPeriod}/>} s={s} info={calendarInfo} dispatch={dispatch} active={planning} layoutActive={planningLayout} onToggle={()=>setPlannerExpanded(!planningRef.current)} notify={notify} now={now} renderTasks={(nodeForTask:any,scheduleForTask:any,highlightedTask:string|null)=><div className="task-list" inert={planningContracting}><AnimatePresence initial={false}>{visibleTasks(s,now).map((t:any)=>row(t,nodeForTask(t),<button type="button" aria-label={`Edit ${t.title}`} title="Edit task name" onClick={e=>{e.stopPropagation();if(planningLayout)scheduleForTask?.(t);else setRenamingTask(t.id);}}><Pencil size={12}/></button>,highlightedTask===t.id))}</AnimatePresence>
  <form className="task-row add-todo-row" onSubmit={add}><span className="empty-checkbox" aria-hidden="true"/>{addingTodo||s.draft?<input ref={input} autoFocus aria-label="Add a to-do" placeholder="Add a to-do" value={s.draft} maxLength={500} onChange={e=>dispatch({type:'draft',value:e.target.value})} onBlur={()=>{if(!s.draft.trim())setAddingTodo(false);}} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setAddingTodo(false);dispatch({type:'draft',value:''});}}}/>:<button type="button" className="add-todo-placeholder" onClick={()=>setAddingTodo(true)}>Add a to-do</button>}</form></div>}/>)
+ :tab==='tracker'?<Tracker trackers={s.trackers} now={now} dispatch={dispatch} notify={notify}/>
  :tab==='focus'?<FocusTimer s={s} seconds={seconds} dispatch={dispatch} onStart={close}/>
  :tab==='pins'?<Pins pins={s.pins} dispatch={dispatch} notify={notify}/>:tab==='reminders'?<Reminders s={s} dispatch={dispatch}/>:tab==='dump'?<IdeasCanvas s={s} dispatch={dispatch} notify={notify}/>:<SettingsView s={s} calendarInfo={calendarInfo} config={config} dispatch={dispatch} exportData={exportData} importData={importData} preview={()=>dispatch({type:'nudge'})}/>}
  </div>

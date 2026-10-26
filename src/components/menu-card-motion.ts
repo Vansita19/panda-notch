@@ -6,6 +6,7 @@ const rhythm='cubic-bezier(.45,0,.55,1)';
 const returnDuration=1000;
 const rippleExitDuration=750;
 const motions:MotionSpec[]=[
+ {selector:'.menu-tracker-glow',duration:6000,poses:[rest,{transform:'translate(-8px,-10px) scale(1.12)',opacity:.8},rest]},
  {selector:'.menu-task-glow-one',duration:6600,poses:[rest,{transform:'translate(-20px,-20px) scale(1.08)',opacity:.88},{transform:'translate(12px,-30px) scale(1.02)',opacity:1},{transform:'translate(20px,6px) scale(.94)',opacity:.94},rest]},
  {selector:'.menu-task-glow-two',duration:7800,poses:[rest,{transform:'translate(22px,-12px) scale(.94)',opacity:.92},{transform:'translate(-18px,-25px) scale(1.12)',opacity:1},{transform:'translate(-26px,8px) scale(1.03)',opacity:.86},rest]},
  {selector:'.menu-task-glow-three',duration:6000,poses:[rest,{transform:'translate(-16px,22px) scale(1.14)',opacity:1},{transform:'translate(-28px,-8px) scale(.93)',opacity:.82},{transform:'translate(16px,-18px) scale(1.07)',opacity:.96},rest]},

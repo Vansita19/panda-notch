@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {initialState,reduce,restore,validateState,resumeView} from '../src/model.mjs';
 
 const now=new Date(2026,9,21,12).getTime();
-const views=['today','tasks','focus','pins','dump','reminders'];
+const views=['today','tasks','tracker','focus','pins','dump','reminders'];
 
 test('first use and legacy saves open Menu without changing existing content',()=>{
  const state=initialState(now);assert.equal(state.lastView,'today');assert.equal(resumeView(state),'today');

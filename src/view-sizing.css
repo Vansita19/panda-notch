@@ -1,13 +1,14 @@
 /* Content views grow to their contents before scrolling at the display limit.
    A manual height applies only until the next view entry. */
-.app-shell:is([data-view=tasks],[data-view=pins],[data-view=dump],[data-view=reminders]).is-open:not([data-resizing]):not([data-manual-height=true]) .notch-layout{
+.app-shell:is([data-view=tasks],[data-view=tracker],[data-view=pins],[data-view=dump],[data-view=reminders]).is-open:not([data-resizing]):not([data-manual-height=true]) .notch-layout{
  height:auto;
  max-height:var(--screen-height);
 }
-.app-shell:is([data-view=tasks],[data-view=pins],[data-view=dump],[data-view=reminders]).is-open:not([data-resizing]):not([data-manual-height=true]) .view-scroll{
+.app-shell:is([data-view=tasks],[data-view=tracker],[data-view=pins],[data-view=dump],[data-view=reminders]).is-open:not([data-resizing]):not([data-manual-height=true]) .view-scroll{
  flex:0 1 auto;
  min-height:0;
 }
+.app-shell[data-view=tracker] .view-scroll{overflow-x:hidden;overscroll-behavior-y:contain}
 
 /* Links and reminders keep their actions below the list; only an overflowing
    list scrolls. Their natural height must not depend on the previous viewport. */

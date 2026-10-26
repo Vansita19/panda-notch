@@ -1,4 +1,5 @@
 import {useLayoutEffect,useRef,type KeyboardEvent} from 'react';
+import {ListChecks} from 'lucide-react';
 import {featureViews} from '../navigation';
 import {deriveMenuUpcoming} from '../menu-upcoming.mjs';
 import {createMenuCardMotion} from './menu-card-motion';
@@ -30,6 +31,7 @@ function CardArtwork({id,label}:{id:string;label:string}){
    <span className="menu-card-label">{label}</span>
    <span className="menu-icon-clip">{asset('imgGroup1','menu-layer menu-focus-icon')}</span>
   </>}
+  {id==='tracker'&&<><span className="menu-layer menu-tracker-glow"/><ListChecks className="menu-layer menu-card-icon" size={34}/><span className="menu-tracker-boxes">{Array.from({length:12},(_,index)=><i key={index} className={index<5?'is-checked':''}/>)}</span><span className="menu-card-label">{label}</span></>}
   {id==='pins'&&<>
    {asset('imgVector4','menu-layer menu-links-glow')}
    {asset('imgBiPinAngle','menu-layer menu-card-icon')}
