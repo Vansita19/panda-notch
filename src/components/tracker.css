@@ -19,6 +19,7 @@
 .tracker-add:disabled{opacity:.5;cursor:default}
 .tracker-name-form{display:flex;align-items:center;flex-wrap:wrap;gap:4px;flex:1;min-width:0;padding:2px 0}
 .tracker-name-form input{flex:1;width:80px;min-width:0;border:1px solid var(--panda-border-strong);border-radius:5px;background:var(--panda-surface-inset);color:var(--panda-text-primary);font:inherit;line-height:1.4;padding:4px 6px}
+.tracker-target{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--panda-text-muted);flex:none}.tracker-name-form .tracker-target input{flex:none;width:46px;font-size:11px;font-variant-numeric:tabular-nums}
 .tracker-name-error{flex-basis:100%;font-size:10px;color:var(--panda-text-secondary)}
 .tracker-history{min-height:110px}.tracker-history h2{font-size:10px;font-weight:500;color:var(--panda-text-muted);margin:4px 3px 8px}
 .tracker-empty-history{font-size:11px;color:var(--panda-text-muted);padding:12px 3px}

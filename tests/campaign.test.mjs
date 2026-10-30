@@ -61,15 +61,20 @@ test('unfinished continuing work advances with its task identity and a frozen pr
  const old=exported(state)[3];assert.equal(old.task_id,id);assert.equal(old.status,'pending');assert.equal(old.start,new Date(previousStart).toISOString());
  const edited={...state,tasks:state.tasks.map(t=>t.id===id?{...t,done:true,completedDay:'2026-11-2'}:t)};state=reconcileCampaign(edited,day2);assert.equal(exported(state)[3].status,'pending');assert.equal(exported(state,'2026-11-02')[3].status,'done');
 });
-test('completed fallback work waits for a genuinely new coach identity',()=>{
- let state=reconcileCampaign(fresh(),day1);const project=task(state,'project');state={...state,tasks:state.tasks.map(t=>t.id===project.id?{...t,done:true,completedDay:'2026-11-1'}:t)};state=reconcileCampaign(state,day1);state=reconcileCampaign(state,day2);assert.equal(task(state,'project'),undefined);assert.equal(state.tasks.filter(t=>t.id===project.id).length,1);assert.equal(state.tasks.find(t=>t.id===project.id).done,true);
- const next=brief('2026-11-02');next.blocks[3].work_id='genuinely-next-project';state=reconcileCampaign(state,day2,next);assert.equal(task(state,'project').campaign.work_id,'genuinely-next-project');assert.equal(task(state,'project').done,false);
+test('every completed fallback block gets a fresh generic block the next day without changing completed work',()=>{
+ let state=reconcileCampaign(fresh(),day1);const originals=state.tasks.filter(t=>t.campaign);
+ state={...state,tasks:state.tasks.map(t=>t.campaign?{...t,done:true,completedDay:'2026-11-1'}:t)};state=reconcileCampaign(state,day1);state=reconcileCampaign(JSON.parse(JSON.stringify(state)),day2);
+ assert.equal(state.tasks.filter(t=>t.campaign?.date==='2026-11-02').length,6,'All six blocks should be available on the next day');
+ assert.deepEqual(slots.map(slot=>task(state,slot).title),['15 company applications','Creative idea + post','Portfolio','Main project','Applied learning','Interview practice']);
+ for(const original of originals){const next=task(state,original.campaign.slot);assert.notEqual(next.id,original.id);assert.equal(next.campaign.work_id,`${original.campaign.slot}:2026-11-02`);assert.equal(next.done,false);assert.equal(state.tasks.find(t=>t.id===original.id).done,true);assert.equal(state.tasks.filter(t=>t.id===original.id).length,1);assert.equal(next.campaign.project_id,'current-work');}
+ assert.equal(task(state,'learning').campaign.subject,'Your choice');assert.strictEqual(reconcileCampaign(state,day2),state);
+ const details=JSON.stringify(state.tasks.filter(t=>t.campaign?.date==='2026-11-02').map(t=>t.campaign));assert.doesNotMatch(details,/case study|brand|website|Two attempts|walkthrough|milestone/i);
 });
 test('explicit deletions survive polling, restart, revisions and recurring day changes',()=>{
  let state=reconcileCampaign(fresh(),day1,brief());const project=task(state,'project'),applications=task(state,'applications');state={...state,tasks:state.tasks.filter(t=>![project.id,applications.id].includes(t.id))};state=reconcileCampaign(state,day1);
  assert.equal(exported(state).find(t=>t.task_id===project.id).status,'deleted');assert.equal(exported(state).find(t=>t.task_id===applications.id).status,'deleted');assert.equal(task(state,'project'),undefined);assert.strictEqual(reconcileCampaign(state,day1,brief()),state);
  const revised=brief('2026-11-01',2);revised.blocks[3].work_id='replacement-same-day';state=reconcileCampaign(JSON.parse(JSON.stringify(state)),day1,revised);assert.equal(task(state,'project'),undefined);assert.equal(task(state,'applications'),undefined);
- state=reconcileCampaign(state,day2);assert.equal(task(state,'project'),undefined);assert.ok(task(state,'applications'));assert.notEqual(task(state,'applications').id,applications.id);assert.equal(state.tasks[0].id,'manual-task');
+ state=reconcileCampaign(state,day2);assert.ok(task(state,'project'));assert.notEqual(task(state,'project').id,project.id);assert.ok(task(state,'applications'));assert.notEqual(task(state,'applications').id,applications.id);assert.equal(state.tasks[0].id,'manual-task');
 });
 test('recurrences are dated while missed offline days never accumulate',()=>{
  let state=reconcileCampaign(fresh(),day1);const first=task(state,'applications');state=reconcileCampaign(state,at('2026-11-20'));
@@ -99,7 +104,7 @@ test('progress can reflect latest user changes without mutating or requiring a p
  assert.equal(p.days[0].tasks.find(t=>t.task_id===project.id).status,'done');assert.equal(p.days[0].tasks.find(t=>t.task_id===project.id).title,'Latest user title');assert.deepEqual(state,before);
 });
 test('campaign home is entered once per actual IST campaign day with honest preview and conclusion',()=>{
- const preview=fresh();assert.deepEqual(campaignEntry(preview,at('2026-10-31')),{showHome:false,date:null});assert.match(campaignNote(preview,at('2026-10-31')).opening,/November 1|Nov(?:ember)?\.? 1/);assert.equal(campaignNote(preview,at('2026-10-31')).active,false);
+ const preview=fresh();assert.deepEqual(campaignEntry(preview,at('2026-10-31')),{showHome:false,date:null});assert.equal(campaignNote(preview,at('2026-10-31')).opening,'One block at a time.');assert.equal(campaignNote(preview,at('2026-10-31')).active,false);
  let state=reconcileCampaign(preview,day1);assert.deepEqual(campaignEntry(state,day1),{showHome:true,date:'2026-11-01'});state=campaignAcknowledgeHome(state,day1);assert.deepEqual(campaignEntry(state,day1),{showHome:false,date:'2026-11-01'});assert.strictEqual(campaignAcknowledgeHome(state,day1),state);assert.equal(campaignEntry(state,day2).showHome,true);
  const note=campaignNote(state,day1);assert.equal(note.source,'fallback');assert.equal(note.freshness,'fallback');assert.match(note.goal,/Stable paid work/);assert.equal(note.active,true);assert.match(campaignNote(state,at('2026-12-01')).opening,/concluded|ended|complete/i);assert.deepEqual(campaignEntry(state,at('2026-12-01')),{showHome:false,date:null});
 });
@@ -112,6 +117,27 @@ test('persisted campaign and task validation rejects malformed ownership and pri
 test('carried work enters its matching next-day block while edited content stays intact',()=>{
  let state=reconcileCampaign(fresh(),day1);const project=task(state,'project');state={...state,tasks:state.tasks.map(t=>t.id===project.id?{...t,title:'My project',plannedTime:null,campaign:{...t.campaign,first_action:'My first action'}}:t)};
  state=reconcileCampaign(state,day1);assert.equal(task(state,'project').plannedTime,null);state=reconcileCampaign(state,day2);assert.equal(task(state,'project').plannedTime.start,Date.parse('2026-11-02T09:30:00Z'));assert.equal(task(state,'project').title,'My project');assert.equal(task(state,'project').campaign.first_action,'My first action');
+});
+test('pending legacy fallback fields generalize in memory without replacing customized fields, ownership or completed work',()=>{
+ const legacy={
+  portfolio:['portfolio-case-opening','Portfolio improvement','Improve the opening of one case study.','Problem, role, decisions and supporting evidence are clear.','Open that case study.'],
+  project:['website-project-brief','Main brand/website project','Write one bounded brief for the same brand/website project.','Audience, purpose, page scope and primary action are written.','Choose the existing identity to build on.'],
+  learning:['learning-brand-direction','Applied learning','Apply one brand-to-website lesson to the same project.','One implemented decision is saved with a short explanation.','Name the single design decision you need to resolve.'],
+  interview:['interview-baseline-case','Interview readiness','Practice one baseline case walkthrough aloud and improve it.','Two attempts and a short self-review are saved.','Say the problem and your role aloud.']
+ };
+ let state=reconcileCampaign(fresh(),day1);
+ state={...state,campaign:structuredClone(state.campaign)};state.tasks=state.tasks.map(value=>{
+  const old=legacy[value.campaign?.slot];if(!old)return value;
+  const [work_id,title,deliverable,done_when,first_action]=old,fields={title,deliverable,done_when,first_action,project_id:'brand-website-main',...(value.campaign.slot==='learning'?{subject:'Brand identity'}:{})},next={...value,title,campaign:{...value.campaign,work_id,...fields}};delete next.campaign.title;
+  state.campaign.owned[value.id].work_id=work_id;Object.assign(state.campaign.owned[value.id].last_applied,fields);
+  return next;
+ });
+ const project=task(state,'project'),portfolio=task(state,'portfolio'),interview=task(state,'interview'),customTime={start:day1+2e6,end:day1+3e6,timezone:'Asia/Kolkata'};
+ state={...state,tasks:state.tasks.map(value=>value.id===project.id?{...value,title:'My chosen project',plannedTime:customTime,campaign:{...value.campaign,deliverable:'My selected next step',evidence:[{ref:'https://example.com/my-work',self_review:'My review'}]}}:value.id===interview.id?{...value,done:true}:value)};
+ const completed=structuredClone(state.tasks.find(value=>value.id===interview.id)),generic={...campaignNote(state,day1).brief,schema_version:1,campaign_id:'november-2026',timezone:'Asia/Kolkata',revision:4,issued_at:new Date(day1).toISOString()};state=reconcileCampaign(state,day1+60000,generic);
+ assert.equal(task(state,'portfolio').title,'Portfolio');assert.doesNotMatch(task(state,'portfolio').campaign.deliverable,/opening|case study/);assert.equal(task(state,'portfolio').id,portfolio.id);assert.equal(task(state,'portfolio').campaign.work_id,'portfolio-case-opening');
+ assert.equal(task(state,'project').title,'My chosen project');assert.equal(task(state,'project').campaign.deliverable,'My selected next step');assert.deepEqual(task(state,'project').plannedTime,customTime);assert.deepEqual(task(state,'project').campaign.evidence,[{ref:'https://example.com/my-work',self_review:'My review'}]);assert.equal(task(state,'project').campaign.project_id,'current-work');assert.equal(task(state,'learning').campaign.subject,'Your choice');assert.equal(task(state,'learning').campaign.project_id,'current-work');
+ assert.deepEqual(state.tasks.find(value=>value.id===interview.id),completed);assert.equal(state.tasks.filter(value=>value.campaign).length,6);assert.strictEqual(state.tasks[0],manual);assert.equal(validCampaignState(state.campaign),true);assert.strictEqual(reconcileCampaign(state,day1+120000),state);
 });
 test('a new learning item binds to the carried project rather than switching the project underneath it',()=>{
  let state=reconcileCampaign(fresh(),day1,brief());const learning=task(state,'learning');state={...state,tasks:state.tasks.map(t=>t.id===learning.id?{...t,done:true}:t)};state=reconcileCampaign(state,day1);

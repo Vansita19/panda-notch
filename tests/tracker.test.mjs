@@ -10,6 +10,25 @@ test('Tracker starts with one Job applications habit and fifteen empty slots',()
  assert.equal(state.trackers[0].slots,15);assert.deepEqual(state.trackers[0].days,{});
  assert.equal(resumeView(reduce(state,{type:'view',view:'tracker'},now)),'tracker');
 });
+test('a new habit keeps its chosen daily target through checks, dates and native-style reload',()=>{
+ let state=reduce(fresh(),{type:'addTracker',title:'Drinking water',slots:3},now),water=state.trackers[1];
+ assert.equal(water.slots,3);assert.equal(state.trackers[0].slots,15);
+ state=check(state,0,true,today,water.id);state=check(state,2,true,today,water.id);state=check(state,1,true,yesterday,water.id);
+ assert.equal(state.trackers[1].days[today],5);assert.equal(state.trackers[1].days[yesterday],2);
+ assert.strictEqual(check(state,3,true,today,water.id),state,'a three-box habit cannot record a fourth box');
+ const sorted=JSON.stringify(state,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b))):value);
+ assert.deepEqual(restore(JSON.parse(sorted),now).trackers,state.trackers);
+});
+test('daily targets accept one through thirty boxes without signed-bit overflow',()=>{
+ let state=reduce(fresh(),{type:'addTracker',title:'One thing',slots:1},now);assert.equal(state.trackers[1].slots,1);
+ state=reduce(state,{type:'addTracker',title:'Thirty things',slots:30},now);const id=state.trackers[2].id;
+ for(let slot=0;slot<30;slot++)state=check(state,slot,true,today,id);
+ assert.equal(state.trackers[2].days[today],2**30-1);assert.deepEqual(restore(state,now).trackers,state.trackers);
+});
+test('invalid target values cannot create a tracker or enter a backup',()=>{
+ const state=fresh();for(const slots of [0,31,-1,1.5,'3',null,NaN])assert.strictEqual(reduce(state,{type:'addTracker',title:'Water',slots},now),state);
+ const habit={...state.trackers[0],slots:3,days:{[today]:8}};assert.throws(()=>validateState({...state,trackers:[habit]}),/not a valid Panda file/);
+});
 test('legacy saves receive the default tracker once while explicit empty lists stay empty',()=>{
  const old=fresh();delete old.trackers;const before=structuredClone(old),migrated=restore(old,now);
  assert.equal(migrated.trackers.length,1);assert.deepEqual(migrated.tasks,before.tasks);assert.deepEqual(migrated.notes,before.notes);assert.deepEqual(migrated.settings,before.settings);assert.equal(Object.hasOwn(old,'trackers'),false);
@@ -51,7 +70,7 @@ test('renaming and reversible deletion retain every day and do not recreate the 
 });
 test('bad tracker collections reject a backup without mutating the input',()=>{
  const base=fresh(),original=structuredClone(base),habit=base.trackers[0];
- const bad=[null,{},[habit,habit],[{...habit,slots:16}],[{...habit,title:''}],[{...habit,created:NaN}],[{...habit,days:[]}],[{...habit,days:{'2026-2-30':1}}],[{...habit,days:{[today]:32768}}],[{...habit,days:{[today]:-1}}],[{...habit,days:{[today]:1.5}}]];
+ const bad=[null,{},[habit,habit],[{...habit,slots:31}],[{...habit,title:''}],[{...habit,created:NaN}],[{...habit,days:[]}],[{...habit,days:{'2026-2-30':1}}],[{...habit,days:{[today]:32768}}],[{...habit,days:{[today]:-1}}],[{...habit,days:{[today]:1.5}}]];
  for(const trackers of bad)assert.throws(()=>validateState({...base,trackers}),/not a valid Panda file/);
  assert.deepEqual(base,original);
 });

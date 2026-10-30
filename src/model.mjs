@@ -1,6 +1,6 @@
 import {reconcileTaskLinks,validSlot,plannerColors} from './planner.mjs';
 import {localDayKey,dayFromKey,liveTaskProgress,validTaskHistory,updateTaskHistory} from './month-progress.mjs';
-import {initialTrackers,validTrackers,trackerSlots,trackerLimit,trackerTitle,trackerMask,trackerToday} from './tracker.mjs';
+import {initialTrackers,validTrackers,trackerSlots,trackerLimit,trackerTitle,trackerMask,trackerToday,validTrackerSlots} from './tracker.mjs';
 import {reconcileCampaign,campaignDate,campaignTaskVisible,campaignEntry,campaignAcknowledgeHome,campaignSetEvidence,validCampaignState,validCampaignTaskMetadata} from './campaign.mjs';
 export function normalizePinURL(value){
  const raw=String(value).trim();if(!raw||/[\x00-\x1f]/.test(raw))throw Error('Enter a link or an absolute file path.');
@@ -94,15 +94,15 @@ export function reduce(state,a,now=Date.now()){
  case 'view':if(!viewValues.includes(a.view)||s.lastView===a.view)return base;s.lastView=a.view;break;
  case 'trackerCheck':{
   const tracker=s.trackers?.find(value=>value.id===a.id),stamp=dayFromKey(a.day);
-  if(!tracker||stamp===null||stamp>dayFromKey(trackerToday(now))||!Number.isInteger(a.slot)||a.slot<0||a.slot>=trackerSlots||typeof a.checked!=='boolean')return base;
+  if(!tracker||stamp===null||stamp>dayFromKey(trackerToday(now))||!Number.isInteger(a.slot)||a.slot<0||a.slot>=tracker.slots||typeof a.checked!=='boolean')return base;
   const mask=trackerMask(tracker,a.day),bit=1<<a.slot,next=a.checked?mask|bit:mask&~bit;
   if(mask===next)return base;
   if(!Object.hasOwn(tracker.days,a.day)&&Object.keys(tracker.days).length>=4000)return base;
   tracker.days[a.day]=next;break;
  }
  case 'addTracker':{
-  const title=trackerTitle(a.title);if(!title||(s.trackers?.length??0)>=trackerLimit)return base;
-  (s.trackers??=[]).push({id:uid(),title,slots:trackerSlots,created:now,days:{}});break;
+  const title=trackerTitle(a.title),slots=a.slots===undefined?trackerSlots:a.slots;if(!title||!validTrackerSlots(slots)||(s.trackers?.length??0)>=trackerLimit)return base;
+  (s.trackers??=[]).push({id:uid(),title,slots,created:now,days:{}});break;
  }
  case 'renameTracker':{
   const title=trackerTitle(a.title),tracker=s.trackers?.find(value=>value.id===a.id);if(!tracker||!title||tracker.title===title)return base;tracker.title=title;break;

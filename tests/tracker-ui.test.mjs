@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
-import {initialState} from '../src/model.mjs';
+import {initialState,reduce} from '../src/model.mjs';
 const bundled=await build({stdin:{contents:`
  import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';
  import {Tracker,TrackerRow,TrackerDateNavigation} from './src/components/Tracker';
@@ -20,6 +20,12 @@ test('the actual Tracker renders exactly fifteen empty named checkboxes and a ze
  const html=ui.render({trackers:initialState(now).trackers,now,dispatch(){},notify(){}});
  assert.equal((html.match(/role="checkbox"/g)||[]).length,15);assert.equal((html.match(/aria-checked="false"/g)||[]).length,15);
  assert.match(html,/0\/15/);assert.match(html,/Job applications/);assert.match(html,/Previous day/);assert.match(html,/Next day/);
+});
+test('a three-bottle habit renders three boxes beside its own count while applications retains fifteen',()=>{
+ const state=reduce(initialState(now),{type:'addTracker',title:'Drinking water',slots:3},now),html=ui.render({trackers:state.trackers,now,dispatch(){},notify(){}});
+ assert.equal((html.match(/role="checkbox"/g)||[]).length,18);assert.match(html,/0\/3/);assert.match(html,/0\/15/);
+ const actions=[],row=ui.TrackerRow({tracker:state.trackers[1],day:today,dispatch:action=>actions.push(action),onRename(){},onRemove(){}}),boxes=collect(row,node=>typeof node.props?.onCheckedChange==='function');
+ assert.equal(boxes.length,3);boxes[2].props.onCheckedChange(true);assert.deepEqual(actions,[{type:'trackerCheck',id:state.trackers[1].id,day:today,slot:2,checked:true}]);
 });
 test('slot interactions dispatch the selected date and explicit checked state',()=>{
  const tracker=initialState(now).trackers[0],actions=[];tracker.days[today]=5;

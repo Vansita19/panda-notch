@@ -2,7 +2,7 @@
 const campaignId='november-2026',timezone='Asia/Kolkata',firstDay='2026-11-01',lastDay='2026-11-30';
 const slots=['applications','visibility','portfolio','project','learning','interview'];
 const recurring=new Set(['applications','visibility']);
-const titles={applications:'15 company applications',visibility:'Creative idea + post',portfolio:'Portfolio improvement',project:'Main brand/website project',learning:'Applied learning',interview:'Interview readiness'};
+const titles={applications:'15 company applications',visibility:'Creative idea + post',portfolio:'Portfolio',project:'Main project',learning:'Applied learning',interview:'Interview practice'};
 const hours={applications:['07:00','10:00'],visibility:['11:00','12:00'],portfolio:['12:00','14:00'],project:['15:00','17:00'],learning:['17:30','20:00'],interview:['20:00','22:00']};
 const goal='Stable paid work through a full-time role, retainer, or substantial project. Full-time is preferred; project income covers confirmed project dates only.';
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
@@ -42,12 +42,33 @@ function fallback(date){
  const content={
   applications:['applications:'+date,'Submit 15 suitable company applications and record them in the existing dashboard.','15 company applications submitted; follow-ups are separate.','Open the prepared company-role queue.'],
   visibility:['visibility:'+date,'Develop one new creative idea and publish one clear post.','One new idea and its post are saved/published.','Choose one idea grounded in your work.'],
-  portfolio:['portfolio-case-opening','Improve the opening of one case study.','Problem, role, decisions and supporting evidence are clear.','Open that case study.'],
-  project:['website-project-brief','Write one bounded brief for the same brand/website project.','Audience, purpose, page scope and primary action are written.','Choose the existing identity to build on.'],
-  learning:['learning-brand-direction','Apply one brand-to-website lesson to the same project.','One implemented decision is saved with a short explanation.','Name the single design decision you need to resolve.'],
-  interview:['interview-baseline-case','Practice one baseline case walkthrough aloud and improve it.','Two attempts and a short self-review are saved.','Say the problem and your role aloud.']
+  portfolio:['portfolio:'+date,'Work on the portfolio item you choose.','Your chosen portfolio step is complete.','Choose what to work on in your portfolio.'],
+  project:['project:'+date,'Work on your current project.','Your chosen project step is complete.','Choose the next step for your project.'],
+  learning:['learning:'+date,'Apply learning of your choice to your current work.','Your chosen learning step is complete.','Choose what you want to learn and apply.'],
+  interview:['interview:'+date,'Practice for interviews in the way you choose.','Your chosen practice is complete.','Choose what you want to practice.']
  };
- return {date,opening:'One block at a time. Start with the first fitting company.',main_focus:'Apply to suitable company roles and build clearer proof in the same brand/website project.',project_id:'brand-website-main',blocks:slots.map(slot=>{const [work_id,deliverable,done_when,first_action]=content[slot];return {slot,work_id,title:titles[slot],deliverable,done_when,first_action,...(slot==='learning'?{subject:'Brand identity'}:{})};})};
+ return {date,opening:'One block at a time.',main_focus:'Choose what to work on in each block.',project_id:'current-work',blocks:slots.map(slot=>{const [work_id,deliverable,done_when,first_action]=content[slot];return {slot,work_id,title:titles[slot],deliverable,done_when,first_action,...(slot==='learning'?{subject:'Your choice'}:{})};})};
+}
+// Only recognizable built-in defaults are retired; edits and coach-authored work stay owned.
+const legacyFallback={
+ portfolio:['portfolio-case-opening','Portfolio improvement','Improve the opening of one case study.','Problem, role, decisions and supporting evidence are clear.','Open that case study.'],
+ project:['website-project-brief','Main brand/website project','Write one bounded brief for the same brand/website project.','Audience, purpose, page scope and primary action are written.','Choose the existing identity to build on.'],
+ learning:['learning-brand-direction','Applied learning','Apply one brand-to-website lesson to the same project.','One implemented decision is saved with a short explanation.','Name the single design decision you need to resolve.'],
+ interview:['interview-baseline-case','Interview readiness','Practice one baseline case walkthrough aloud and improve it.','Two attempts and a short self-review are saved.','Say the problem and your role aloud.']
+};
+function generalizeFallback(campaign,tasks,date){
+ const generic=fallback(date);
+ for(const entry of Object.values(campaign.owned)){
+  const old=legacyFallback[entry.slot];if(!old||entry.work_id!==old[0]||entry.status!=='pending'||!['deliverable','done_when','first_action'].every((key,index)=>entry.last_applied[key]===old[index+2]))continue;
+  const index=tasks.findIndex(task=>task.id===entry.task_id);if(index<0)continue;
+  const task=tasks[index],next={...task,campaign:{...task.campaign}},[,title,deliverable,done_when,first_action]=old;
+  const previous={title,deliverable,done_when,first_action,project_id:'brand-website-main',...(entry.slot==='learning'?{subject:'Brand identity'}:{})},applied=appliedFields(generic.blocks.find(block=>block.slot===entry.slot),entry.date,generic.project_id);
+  for(const key of Object.keys(previous)){
+   const value=key==='title'?task.title:task.campaign[key];
+   if(equal(value,entry.last_applied[key])&&equal(value,previous[key])){if(key==='title')next.title=applied.title;else next.campaign[key]=applied[key];entry.last_applied[key]=applied[key];}
+  }
+  if(!equal(next,task))tasks[index]=next;
+ }
 }
 function plannedTime(date,slot){const [start,end]=hours[slot];return {start:Date.parse(`${date}T${start}:00+05:30`),end:Date.parse(`${date}T${end}:00+05:30`),timezone};}
 const validTime=value=>value===null||(record(value)&&Number.isFinite(value.start)&&Number.isFinite(value.end)&&Number.isFinite(new Date(value.start).getTime())&&Number.isFinite(new Date(value.end).getTime())&&value.end>value.start&&value.timezone===timezone);
@@ -132,7 +153,7 @@ export function reconcileCampaign(state,now=Date.now(),brief){
    if(equal(campaign,state.campaign))return state;
    return {...state,tasks:state.tasks,campaign};
   }
-  delete campaign.preparation_error;campaign.current_day=date;
+  delete campaign.preparation_error;campaign.current_day=date;generalizeFallback(campaign,tasks,date);
   const bound=Object.values(campaign.owned).find(entry=>entry.slot==='project'&&entry.status==='pending')??Object.values(campaign.owned).find(entry=>entry.slot==='learning'&&entry.status==='pending');
   const boundTask=bound&&tasks.find(task=>task.id===bound.task_id),projectId=boundTask?.campaign.project_id??guidance.project_id;
   for(const block of guidance.blocks){
@@ -174,7 +195,7 @@ export function campaignAcknowledgeHome(state,now=Date.now()){
 export function campaignNote(state,now=Date.now()){
  const date=campaignDate(now),active=campaignActive(now),brief=state.campaign?.accepted_briefs?.[date],routine=fallback(date);
  const savedGoal=Object.entries(state.campaign?.accepted_briefs??{}).filter(([day,value])=>day<=date&&value.goal).sort(([a],[b])=>b.localeCompare(a))[0]?.[1]?.goal;
- if(date<firstDay)return {date,active:false,source:state.campaign?.staged_brief?'coach':'fallback',opening:'Your November campaign starts November 1. This is a preview of the daily routine.',main_focus:state.campaign?.staged_brief?.main_focus??routine.main_focus,goal:state.campaign?.staged_brief?.goal??goal,brief:structuredClone(state.campaign?.staged_brief??fallback(firstDay)),freshness:'upcoming'};
+ if(date<firstDay)return {date,active:false,source:state.campaign?.staged_brief?'coach':'fallback',opening:state.campaign?.staged_brief?.opening??'One block at a time.',main_focus:state.campaign?.staged_brief?.main_focus??routine.main_focus,goal:state.campaign?.staged_brief?.goal??goal,brief:structuredClone(state.campaign?.staged_brief??fallback(firstDay)),freshness:'upcoming'};
  if(date>lastDay)return {date,active:false,source:'fallback',opening:'The November campaign has concluded. Your saved work and progress are still here.',main_focus:'Review the work you completed and choose the next step with your coach.',goal,freshness:'concluded'};
  return {date,active,source:brief?'coach':'fallback',opening:brief?.opening??routine.opening,main_focus:brief?.main_focus??routine.main_focus,goal:brief?.goal??savedGoal??goal,brief:structuredClone(brief??routine),freshness:state.campaign?.preparation_error?'blocked':brief?'current':'fallback',...(state.campaign?.preparation_error?{preparation_error:state.campaign.preparation_error}:{})};
 }

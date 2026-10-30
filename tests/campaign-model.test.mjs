@@ -43,6 +43,13 @@ test('deletion and explicit schedule/name edits survive model polling and JSON r
  state=reduce(state,{type:'delete',id:task.id},first+60000);state=restore(JSON.parse(JSON.stringify(state)),first+120000);
  assert.equal(state.tasks.some(value=>value.id===task.id),false);assert.equal(state.campaign.days['2026-11-01'].tasks.find(value=>value.task_id===task.id).status,'deleted');
 });
+test('renamed unfinished blocks keep their task and work identities through refresh, restart and next-day carryover',()=>{
+ let state=initialState(first);const manual=structuredClone(state.tasks.filter(task=>!task.campaign)),originals=owned(state).filter(task=>['portfolio','project','learning','interview'].includes(task.campaign.slot));
+ for(const task of originals)state=reduce(state,{type:'edit',id:task.id,title:`My chosen ${task.campaign.slot} work`},first);
+ state=advance(state,first+60000);state=restore(JSON.parse(JSON.stringify(state)),first+120000);state=advance(state,second);state=restore(JSON.parse(JSON.stringify(state)),second+60000);
+ for(const original of originals){const current=state.tasks.find(task=>task.id===original.id);assert.equal(current.title,`My chosen ${original.campaign.slot} work`);assert.equal(current.campaign.work_id,original.campaign.work_id);assert.equal(current.campaign.date,'2026-11-02');assert.equal(current.campaign.carried_from,'2026-11-01');assert.equal(owned(state).filter(task=>task.campaign.slot===original.campaign.slot).length,1);}
+ assert.deepEqual(state.tasks.filter(task=>!task.campaign),manual);
+});
 test('ordinary native ticks prepare a new campaign day without old recurring backlog',()=>{
  const start=initialState(first),oldApplication=owned(start).find(task=>task.campaign.slot==='applications');
  const next=advance(start,second);assert.equal(visibleTasks(next,second).filter(task=>task.campaign).length,6);

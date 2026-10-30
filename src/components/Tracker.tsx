@@ -1,8 +1,8 @@
 import React,{useLayoutEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowUpRight,Check,ChevronLeft,ChevronRight,Pencil,Plus,X} from 'lucide-react';
 import {Checkbox} from '../arc/checkbox/checkbox';
-import {dayFromKey,localDayKey} from '../month-progress.mjs';
-import {recordedTrackerDays,shiftTrackerDay,trackerCount,trackerLimit,trackerMask,trackerTitle,trackerToday} from '../tracker.mjs';
+import {dayFromKey} from '../month-progress.mjs';
+import {recordedTrackerDays,shiftTrackerDay,trackerCount,trackerLimit,trackerMask,trackerTitle,trackerToday,trackerSlotLimit,validTrackerSlots} from '../tracker.mjs';
 import './tracker.css';
 
 type Habit={id:string;title:string;slots:number;created:number;days:Record<string,number>};
@@ -35,11 +35,12 @@ export function TrackerRow({tracker,day,dispatch,onRename,onRemove,editor}:{trac
  </div>;
 }
 
-function TrackerNameForm({initial='',label,onSave,onCancel}:{initial?:string;label:string;onSave:(title:string)=>void;onCancel:()=>void}){
- const [value,setValue]=useState(initial),[error,setError]=useState('');
- return <form className="tracker-name-form" onSubmit={event=>{event.preventDefault();const title=trackerTitle(value);if(!title){setError('Enter a tracker name.');return;}onSave(title);}} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();onCancel();}}}>
-  <input autoFocus aria-label={label} aria-invalid={!!error||undefined} aria-describedby={error?'tracker-name-error':undefined} value={value} maxLength={100} placeholder="Tracker name" onChange={event=>{setValue(event.target.value);setError('');}}/>
-  <button type="submit" aria-label="Save tracker name"><Check size={13}/></button><button type="button" aria-label="Cancel tracker name" onClick={onCancel}><X size={13}/></button>
+function TrackerNameForm({initial='',label,chooseTarget=false,onSave,onCancel}:{initial?:string;label:string;chooseTarget?:boolean;onSave:(title:string,slots?:number)=>void;onCancel:()=>void}){
+ const [value,setValue]=useState(initial),[target,setTarget]=useState('3'),[error,setError]=useState(''),[targetError,setTargetError]=useState(false);
+ return <form className="tracker-name-form" noValidate onSubmit={event=>{event.preventDefault();const title=trackerTitle(value),slots=Number(target);if(!title){setTargetError(false);setError('Enter a tracker name.');event.currentTarget.querySelector<HTMLInputElement>('[maxlength]')?.focus();return;}if(chooseTarget&&!validTrackerSlots(slots)){setTargetError(true);setError(`Choose a daily target from 1 to ${trackerSlotLimit}.`);event.currentTarget.querySelector<HTMLInputElement>('[type=number]')?.focus();return;}onSave(title,chooseTarget?slots:undefined);}} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();onCancel();}}}>
+  <input autoFocus aria-label={label} aria-invalid={!!error&&!targetError||undefined} aria-describedby={error&&!targetError?'tracker-name-error':undefined} value={value} maxLength={100} placeholder="Tracker name" onChange={event=>{setValue(event.target.value);setError('');}}/>
+  {chooseTarget&&<label className="tracker-target">Daily target<input type="number" min={1} max={trackerSlotLimit} step={1} aria-label="Daily target" aria-invalid={!!error&&targetError||undefined} aria-describedby={error&&targetError?'tracker-name-error':undefined} value={target} onChange={event=>{setTarget(event.target.value);setError('');}}/></label>}
+  <button type="submit" aria-label={chooseTarget?'Create tracker':'Save tracker name'}><Check size={13}/></button><button type="button" aria-label={chooseTarget?'Cancel new tracker':'Cancel tracker name'} onClick={onCancel}><X size={13}/></button>
   {error&&<span id="tracker-name-error" className="tracker-name-error" role="alert">{error}</span>}
  </form>;
 }
@@ -57,6 +58,6 @@ export function Tracker({trackers,now,dispatch,notify}:{trackers:Habit[];now:num
   <header className="tracker-heading"><TrackerDateNavigation day={day} today={today} onChange={chooseDay}/><button className="tracker-history-toggle" type="button" aria-pressed={history} onClick={()=>{setHistory(value=>!value);setAdding(false);setEditing(null);}}>{history?<><ArrowLeft size={12}/> Back</>:<>History <ArrowUpRight size={12}/></>}</button></header>
   {history?<div className="tracker-history" aria-label="Recorded tracker dates"><h2>Recorded days</h2>{!days.length?<p className="tracker-empty-history">No history yet.</p>:days.map(value=>{const count=trackers.reduce((sum,tracker)=>sum+trackerCount(tracker,value),0);return <button className="tracker-history-day" type="button" key={value} onClick={()=>chooseDay(value)}><span>{value===today?'Today':dateLabel(value,true)}</span><span>{count} {count===1?'check':'checks'} <ChevronRight size={12}/></span></button>;})}</div>:
   <><div className="tracker-list">{trackers.map((tracker,index)=><TrackerRow key={tracker.id} tracker={tracker} day={day} dispatch={dispatch} onRename={()=>{setAdding(false);setEditing(tracker.id);}} onRemove={()=>remove(tracker,index)} editor={editing===tracker.id?<TrackerNameForm key={tracker.id} initial={tracker.title} label={`Rename ${tracker.title}`} onCancel={finishForm} onSave={title=>{dispatch({type:'renameTracker',id:tracker.id,title});finishForm();}}/>:undefined}/>)}</div>
-  {adding?<TrackerNameForm label="New tracker name" onCancel={finishForm} onSave={title=>{dispatch({type:'addTracker',title});finishForm();}}/>:<button className="tracker-add" ref={addButton} type="button" disabled={trackers.length>=trackerLimit} onClick={()=>{setEditing(null);setAdding(true);}}><Plus size={14}/> Add tracker</button>}</>}
+  {adding?<TrackerNameForm label="New tracker name" chooseTarget onCancel={finishForm} onSave={(title,slots)=>{dispatch({type:'addTracker',title,slots});finishForm();}}/>:<button className="tracker-add" ref={addButton} type="button" disabled={trackers.length>=trackerLimit} onClick={()=>{setEditing(null);setAdding(true);}}><Plus size={14}/> Add tracker</button>}</>}
  </section>;
 }

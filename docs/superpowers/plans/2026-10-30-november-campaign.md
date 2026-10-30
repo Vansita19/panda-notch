@@ -35,3 +35,10 @@ Idempotent revisions, malformed/future/stale data, preserved manual edits/delete
 - Native application reopened with all existing tasks, notes, pins, ideas, calendar settings and Tracker data preserved. Prepared revision 3 remains staged with zero early campaign tasks; the minimal export is fresh.
 - Native sorted-key saves round-trip through strict campaign validation. Whole-month evidence exports fit the bounded 5 MB cap; rejected exports preserve the previous snapshot.
 - Independent review findings (size cap and IST Tracker boundary) are fixed and re-reviewed. Private ambition and machine-specific coordination paths remain in local configuration/guidance, outside Git.
+
+## Same-day user simplification
+
+- Home now shows one short encouraging Today note, without the long routine, assigned focus or goal. Optional review remains in existing task details.
+- Daily defaults use generic editable names and dated identities. Completed blocks get fresh generic blocks the next day; unfinished customized continuing work retains its identity and matching slot. Existing application/post recurrence stays unchanged.
+- New trackers choose their own 1–30 box daily target. Existing Job applications remains at 15, with all saved checks preserved.
+- 334 full tests, TypeScript and build pass. Mounted checks cover a three-box habit, persistence, task rename/reopen and saving a review in its relocated task details. Native UI assets match the build and the reopened app preserves existing data.
