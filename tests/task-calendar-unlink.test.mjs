@@ -6,7 +6,7 @@ const original={id:'task-a',title:'Design review',done:false,priority:'medium',c
 const acknowledged={eventId:'new-event',calendarId:'work',start:61000,end:1861000};
 function fixture(writeCalendar=async request=>request.operation==='remove'?{removed:true}:{event:acknowledged},native=true){
  const tasks=[structuredClone(original)],trace=[],requests=[];
- const dispatch=action=>{trace.push(action.type);const task=tasks.find(task=>task.id===action.id);if(!task)return;if(action.type==='taskCalendarUnlinked')delete task.calendarLink;if(action.type==='taskCalendarLinked')task.calendarLink=structuredClone(action.link);};
+ const dispatch=action=>{trace.push(action.type);const task=tasks.find(task=>task.id===action.id);if(!task)return;if(action.type==='taskCalendarUnlinked')delete task.calendarLink;if(action.type==='taskCalendarLinked')task.calendarLink=structuredClone(action.link);if(action.type==='taskPlannedTime'){if(action.time)task.plannedTime=structuredClone(action.time);else delete task.plannedTime;}};
  return {tasks,trace,requests,options:{native,dispatch,getTask:id=>tasks.find(task=>task.id===id),writeCalendar:async request=>{requests.push(request);trace.push(request.operation);return writeCalendar(request);}}};
 }
 
@@ -73,4 +73,26 @@ test('native bridge acknowledgement may already have linked the restored event b
  const f=fixture(async request=>{if(request.operation==='remove')return {removed:true};f.tasks[0].calendarLink={...acknowledged};return {event:acknowledged};});
  const undo=await unlinkCalendarTaskTime(f.tasks[0],f.options);await undo();
  assert.deepEqual(f.tasks[0].calendarLink,{...acknowledged,color:'#b698ff',missing:false});
+});
+
+test('local unlink and one-shot Undo only change plannedTime without calling Calendar',async()=>{
+ const f=fixture(async()=>{throw new Error('Must not call Calendar');}),time={start:1000,end:1801000,timezone:'Asia/Kolkata',color:'#efab78'};
+ f.tasks[0]={id:'local',title:'Portfolio improvement',done:false,campaign:{campaign_id:'november-2026',slot:'portfolio'},plannedTime:time};
+ const original=structuredClone(f.tasks[0]),undo=await unlinkCalendarTaskTime(f.tasks[0],f.options);
+ assert.equal(f.tasks[0].plannedTime,undefined);assert.equal(f.tasks.length,1);assert.equal(f.tasks[0].title,'Portfolio improvement');assert.deepEqual(f.requests,[]);
+ await undo();await undo();assert.deepEqual(f.tasks,[original]);assert.deepEqual(f.trace,['taskPlannedTime','taskPlannedTime']);assert.deepEqual(f.requests,[]);
+});
+
+test('local Undo preserves a replacement local or real Calendar schedule',async()=>{
+ for(const replacement of [{plannedTime:{start:2000,end:1802000,timezone:'Asia/Kolkata'}},{calendarLink:{...acknowledged}}]){
+  const f=fixture(async()=>{throw new Error('Must not call Calendar');});f.tasks[0]={id:'local',title:'Review',plannedTime:{start:1000,end:1801000,timezone:'Asia/Kolkata'}};
+  const undo=await unlinkCalendarTaskTime(f.tasks[0],f.options);Object.assign(f.tasks[0],replacement);const before=structuredClone(f.tasks[0]);
+  await assert.rejects(undo(),/already scheduled/);assert.deepEqual(f.tasks[0],before);assert.deepEqual(f.requests,[]);
+ }
+});
+
+test('local time behind a missing provider link can be unlinked and restored locally',async()=>{
+ const f=fixture(async()=>{throw new Error('Must not call Calendar');});f.tasks[0].calendarLink.missing=true;f.tasks[0].plannedTime={start:1000,end:1801000,timezone:'Asia/Kolkata'};
+ const before=structuredClone(f.tasks[0]),undo=await unlinkCalendarTaskTime(f.tasks[0],f.options);assert.equal(f.tasks[0].plannedTime,undefined);
+ await undo();assert.deepEqual(f.tasks[0],before);assert.deepEqual(f.requests,[]);
 });

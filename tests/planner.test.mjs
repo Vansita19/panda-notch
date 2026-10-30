@@ -114,3 +114,25 @@ test('unlink acknowledgement hides stale owned events without hiding tasks outsi
  const preview=mergePlannerEvents(stale,tasks,{taskId:'unlinked',start:11*HOUR,end:12*HOUR,phase:'selecting'});
  assert.equal(preview.length,2);assert.equal(preview.find(e=>e.taskId==='unlinked').title,'Task stays here');
 });
+
+test('local planned time renders once without fabricating a Calendar link or changing the task',()=>{
+ const task={id:'campaign-local',title:'Portfolio improvement',campaign:{campaign_id:'november-2026',date:'2026-11-01',slot:'portfolio'},plannedTime:{start:Date.parse('2026-11-01T06:30:00Z'),end:Date.parse('2026-11-01T08:30:00Z'),timezone:'Asia/Kolkata',color:'#b698ff'}};
+ const before=structuredClone(task),range={start:Date.parse('2026-11-01T01:30:00Z'),end:Date.parse('2026-11-01T17:30:00Z')};
+ const events=mergePlannerEvents([{taskId:task.id,id:'stale-provider',eventId:'stale',start:0,end:1}],[task]);
+ assert.equal(events.length,1);assert.equal(events[0].id,'task:campaign-local');assert.equal(events[0].local,true);assert.equal(events[0].eventId,undefined);
+ assert.deepEqual([events[0].start,events[0].end,events[0].title],[Date.parse('2026-11-01T06:30:00Z'),Date.parse('2026-11-01T08:30:00Z'),'Portfolio improvement']);
+ assert.equal(layoutEvents(events,range).length,1);assert.deepEqual(task,before);assert.equal(task.calendarLink,undefined);
+});
+
+test('real Calendar time wins over local time while missing Calendar time falls back locally',()=>{
+ const local={start:8*HOUR,end:9*HOUR,timezone:'Asia/Kolkata'},link={eventId:'real',calendarId:'work',start:10*HOUR,end:11*HOUR};
+ const linked={id:'linked-local',title:'Review',plannedTime:local,calendarLink:link};
+ const real=mergePlannerEvents([],[linked]);assert.equal(real.length,1);assert.equal(real[0].eventId,'real');assert.equal(real[0].start,10*HOUR);assert.equal(real[0].local,false);
+ const fallback=mergePlannerEvents([],[{...linked,calendarLink:{...link,missing:true}}]);assert.equal(fallback.length,1);assert.equal(fallback[0].start,8*HOUR);assert.equal(fallback[0].local,true);assert.equal(fallback[0].eventId,undefined);
+ assert.deepEqual(mergePlannerEvents([],[{id:'invalid',plannedTime:{...local,end:local.start}},{id:'zone-less',plannedTime:{start:8*HOUR,end:9*HOUR}}]),[]);
+});
+
+test('campaign day geometry uses its Asia/Kolkata date even when the host day differs',()=>{
+ const range=dayRange(Date.parse('2026-10-31T20:00:00Z'),7,23,'Asia/Kolkata');
+ assert.deepEqual(range,{start:Date.parse('2026-11-01T01:30:00Z'),end:Date.parse('2026-11-01T17:30:00Z')});
+});

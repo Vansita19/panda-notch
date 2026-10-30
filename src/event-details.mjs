@@ -1,20 +1,25 @@
-import {validSlot} from './planner.mjs';
+import {dayRange,validSlot} from './planner.mjs';
 const timeMinutes=value=>/^\d{2}:\d{2}$/.test(value)&&+value.slice(0,2)<24&&+value.slice(3)<60?+value.slice(0,2)*60+ +value.slice(3):null;
-export function eventDraft(draft,base){
+export function eventDraft(draft,base,timezone){
  const title=draft.title.trim();
  if(!title)return {error:'Give this task a name.'};
  if(!draft.start&&!draft.end)return {title};
  const a=timeMinutes(draft.start),b=timeMinutes(draft.end);
  if(a===null||b===null)return {error:'Enter both start and end times.'};
+ if(timezone==='Asia/Kolkata'){
+  const midnight=dayRange(base,0,24,timezone).start,start=midnight+a*60000,end=midnight+(b===0&&b<=a?1440:b)*60000;
+  if(!validSlot(start,end))return {error:'End time must be after start time.'};
+  return {title,start,end};
+ }
  const start=new Date(base),end=new Date(base);start.setHours(Math.floor(a/60),a%60,0,0);end.setHours(Math.floor(b/60),b%60,0,0);
  if(b===0&&+end<=+start)end.setDate(end.getDate()+1);
  if(!validSlot(+start,+end))return {error:'End time must be after start time.'};
  return {title,start:+start,end:+end};
 }
 // Used by debounce, blur, and dismissal; a deleted or acknowledged task never writes again.
-export function eventDraftUpdate(draft,saved,base,present=true,requiresTime=false,invalidated=false){
+export function eventDraftUpdate(draft,saved,base,present=true,requiresTime=false,invalidated=false,timezone){
  if(!present||invalidated||draft.title.trim()===saved.title&&draft.start===saved.start&&draft.end===saved.end)return null;
- const update=eventDraft(draft,base);
+ const update=eventDraft(draft,base,timezone);
  if(!update.error&&requiresTime&&update.start===undefined)return {error:'Enter both start and end times.'};
  return update;
 }

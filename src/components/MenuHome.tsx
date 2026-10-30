@@ -1,4 +1,4 @@
-import {useLayoutEffect,useRef,type KeyboardEvent} from 'react';
+import {useLayoutEffect,useRef,type KeyboardEvent,type ReactNode} from 'react';
 import {ListChecks} from 'lucide-react';
 import {featureViews} from '../navigation';
 import {deriveMenuUpcoming} from '../menu-upcoming.mjs';
@@ -6,7 +6,7 @@ import {createMenuCardMotion} from './menu-card-motion';
 import './menu-home.css';
 
 type MenuEvent={id:string;eventId?:string;calendarId?:string;title:string;start:number;end:number;allDay?:boolean;color?:string};
-type MenuHomeProps={onNavigate:(id:string)=>void;events:MenuEvent[];now:number;onOpenCalendar:()=>void;eventColor?:(event:MenuEvent)=>string|undefined};
+type MenuHomeProps={onNavigate:(id:string)=>void;events:MenuEvent[];now:number;onOpenCalendar:()=>void;eventColor?:(event:MenuEvent)=>string|undefined;todayNote?:ReactNode};
 const asset=(name:string,className:string)=><img className={className} src={`menu/${name}.svg`} alt="" draggable={false}/>;
 const updateScrollEdges=(node:HTMLDivElement)=>{
  const maximum=Math.max(0,node.scrollWidth-node.clientWidth);
@@ -58,7 +58,7 @@ function CardArtwork({id,label}:{id:string;label:string}){
  </span>;
 }
 
-export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor}:MenuHomeProps){
+export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor,todayNote}:MenuHomeProps){
  const viewport=useRef<HTMLDivElement>(null);
  const ambient=useRef<ReturnType<typeof createMenuCardMotion>|null>(null);
  useLayoutEffect(()=>{ambient.current=createMenuCardMotion();return()=>{ambient.current?.dispose();ambient.current=null;};},[]);
@@ -98,6 +98,7 @@ export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor}:MenuH
  const eventTime=(event:MenuEvent)=>event.allDay?'All day':`${new Date(event.start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true})} – ${new Date(event.end).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true})}`;
  const accents=['#62a8ff','#b698ff','#34c4d8'];
  return <nav className="menu-home" aria-label="Panda tools">
+  {todayNote}
   <div className="menu-home-scroll" ref={viewport} onKeyDown={navigateCards} onFocusCapture={event=>{if(event.target instanceof HTMLButtonElement)reveal(event.target);}}>
    {featureViews.map(card=><button className="menu-card" type="button" tabIndex={0} key={card.id} aria-label={card.title} onPointerEnter={e=>{if(e.pointerType==='mouse')ambient.current?.enter(e.currentTarget);}} onPointerMove={e=>{if(e.pointerType==='mouse')ambient.current?.enter(e.currentTarget);}} onPointerLeave={e=>ambient.current?.leave(e.currentTarget)} onClick={()=>onNavigate(card.id)}><CardArtwork id={card.id} label={card.title}/></button>)}
   </div>

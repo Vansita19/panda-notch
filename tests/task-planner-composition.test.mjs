@@ -16,6 +16,7 @@ function visit(node){
 visit(ast);assert.equal(renderers.size,2,'The fixture must exercise App’s actual taskMeta and row renderers');
 const bundled=await build({stdin:{contents:`
  import {TaskPriority} from './src/components/TaskPriority';
+ import {taskSchedule} from './src/task-schedule.mjs';
  const motion={div:'task-row'},Checkbox='checkbox',InlineTaskName='task-name-input',X='delete-icon';
  export const renderPriority=props=>TaskPriority(props);
  export function renderLinkedRow(task,{planning,planningLayout,planningContracting}){

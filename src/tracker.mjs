@@ -1,6 +1,8 @@
 import {localDayKey,dayFromKey} from './month-progress.mjs';
+import {campaignActive,campaignDate} from './campaign.mjs';
 
 export const trackerSlots=15,trackerLimit=100;
+export const trackerToday=(now=Date.now())=>campaignActive(now)?campaignDate(now).split('-').map(Number).join('-'):localDayKey(now);
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
 export const trackerTitle=value=>typeof value==='string'&&value.trim().length>0&&value.trim().length<=100?value.trim():null;
 export const initialTrackers=(now=Date.now())=>[{id:'job-applications',title:'Job applications',slots:trackerSlots,created:now,days:{}}];

@@ -1,6 +1,7 @@
 import {reconcileTaskLinks,validSlot,plannerColors} from './planner.mjs';
 import {localDayKey,dayFromKey,liveTaskProgress,validTaskHistory,updateTaskHistory} from './month-progress.mjs';
-import {initialTrackers,validTrackers,trackerSlots,trackerLimit,trackerTitle,trackerMask} from './tracker.mjs';
+import {initialTrackers,validTrackers,trackerSlots,trackerLimit,trackerTitle,trackerMask,trackerToday} from './tracker.mjs';
+import {reconcileCampaign,campaignDate,campaignTaskVisible,campaignEntry,campaignAcknowledgeHome,campaignSetEvidence,validCampaignState,validCampaignTaskMetadata} from './campaign.mjs';
 export function normalizePinURL(value){
  const raw=String(value).trim();if(!raw||/[\x00-\x1f]/.test(raw))throw Error('Enter a link or an absolute file path.');
  const path=raw.startsWith('/')&&!raw.startsWith('//');
@@ -17,17 +18,18 @@ export function validPin(p){try{return !!p&&/^[0-9a-f-]{36}$/i.test(p.id)&&typeo
 export const taskPriorityValues=['low','medium','high'];
 const viewValues=['today','tasks','tracker','focus','pins','dump','reminders'];
 export function resumeView(state,target){return viewValues.includes(target)?target:viewValues.includes(state?.lastView)?state.lastView:'today';}
+export function openingView(state,now=Date.now(),target){return target===undefined&&campaignEntry(state,now).showHome?'today':resumeView(state,target);}
 const minute=60000;
 export const stepTimerMinutes=(value,direction)=>Math.max(1,Math.min(120,(direction>0?Math.floor(value/5)+1:Math.ceil(value/5)-1)*5));
 export const dayKey=localDayKey;
-export const visibleTasks=(s,now=Date.now())=>s.tasks.filter(t=>!t.done||t.completedDay===dayKey(now));
+export const visibleTasks=(s,now=Date.now())=>s.tasks.filter(t=>campaignTaskVisible(t,now)&&(!t.done||(t.campaign?.campaign_id==='november-2026'?t.campaign.date===campaignDate(now):t.completedDay===dayKey(now))));
 export function taskProgress(s,now=Date.now()){return liveTaskProgress(s.tasks,now);}
 const uid=()=>globalThis.crypto.randomUUID();
 export const messages=[{title:'Drink water, buddy.',sub:'A little sip. A little reset.',kind:'water'},{title:'Stretch your paws.',sub:'Your shoulders deserve a tiny break.',kind:'stretch'},{title:'Look up. Look far.',sub:'Give those lovely eyes a moment.',kind:'eyes'},{title:'One small thing at a time.',sub:'You’re doing better than you think.',kind:'kind'}];
 export const durations=(s,mode)=>({focus:s.settings.focusMinutes,short:s.settings.shortMinutes,long:s.settings.longMinutes}[mode]*60);
 const timerNotice=(mode,now)=>({kind:'timer',id:uid(),at:now,title:mode==='focus'?'Ready for a fresh start?':'You did it. Take a break.',sub:mode==='focus'?'Your next focus session is ready.':'Your break is ready when you are.'});
 export function initialState(now=Date.now()){
- return updateTaskHistory({version:1,lastView:'today',trackers:initialTrackers(now),calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',brainDumpTitle:'',activeNoteId:null,reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false},now);
+ return updateTaskHistory(reconcileCampaign({version:1,lastView:'today',trackers:initialTrackers(now),calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',brainDumpTitle:'',activeNoteId:null,reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false},now),now);
 }
 export function sampleEvents(now){return [{id:uid(),title:'A little planning time',start:now+20*minute,end:now+50*minute,color:'blue'},{id:uid(),title:'Make room for creative work',start:now+90*minute,end:now+150*minute,color:'peach'}];}
 export function remaining(t,now=Date.now()){return Math.max(0,Math.ceil(t.seconds-(t.running?Math.max(0,now-t.startedAt)/1000:0)));}
@@ -37,6 +39,11 @@ export function validateState(x){
  if(!x||x.version!==1||!Array.isArray(x.tasks)||x.tasks.length>5000||!Array.isArray(x.events)||x.events.length>1000)fail();
  if(x.lastView!==undefined&&!viewValues.includes(x.lastView))fail();
  if(x.trackers!==undefined&&!validTrackers(x.trackers))fail();
+ if(x.campaign!==undefined&&!validCampaignState(x.campaign))fail();
+ for(const task of x.tasks){
+  if(task.campaign!==undefined&&!validCampaignTaskMetadata(task))fail();
+  const time=task.plannedTime;if(time!==undefined&&time!==null&&(!record(time)||!validSlot(time.start,time.end)||time.timezone!=='Asia/Kolkata'||(time.color!==undefined&&!plannerColors.includes(time.color))))fail();
+ }
  if((x.taskHistory!==undefined||x.taskHistoryDay!==undefined)&&!validTaskHistory(x.taskHistory,x.taskHistoryDay))fail();
  if(x.lastGreetingDay!=null&&(typeof x.lastGreetingDay!=='string'||!/^\d{4}-\d{1,2}-\d{1,2}$/.test(x.lastGreetingDay)))fail();
  if(x.pins!==undefined&&(!Array.isArray(x.pins)||x.pins.length>200||x.pins.some(p=>!validPin(p))||new Set(x.pins.map(p=>p.id)).size!==x.pins.length))fail();
@@ -69,16 +76,25 @@ export function validateState(x){
  for(const value of Object.values(x.snoozed))if(!Number.isFinite(value))fail();
  return structuredClone(x);
 }
-export function restore(x,now=Date.now()){const s=validateState(x);s.lastView??='today';s.trackers??=initialTrackers(now);s.pins??=[];s.brainDump??='';s.brainDumpTitle??='';s.activeNoteId??=null;s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return updateTaskHistory(s,now);}
+export function restore(x,now=Date.now()){const s=validateState(x);s.lastView??='today';s.trackers??=initialTrackers(now);s.pins??=[];s.brainDump??='';s.brainDumpTitle??='';s.activeNoteId??=null;s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return updateTaskHistory(reconcileCampaign(s,now),now);}
 export function reduce(state,a,now=Date.now()){
- const base=updateTaskHistory(state,now);
+ const base=updateTaskHistory(reconcileCampaign(state,now),now);
  if(a.type==='checkpoint'&&!state.timer.running)return base;
  const s=structuredClone(base),t=s.timer;
  switch(a.type){
+ case 'campaignBrief':return updateTaskHistory(reconcileCampaign(base,now,a.brief),now);
+ case 'campaignHomeSeen':return campaignAcknowledgeHome(base,now);
+ case 'campaignEvidence':try{return updateTaskHistory(campaignSetEvidence(base,a.id,a.evidence,now),now);}catch{return base;}
+ case 'taskPlannedTime':{
+  const task=s.tasks.find(task=>task.id===a.id),time=a.time;
+  if(!task||time!==null&&(!time||!validSlot(time.start,time.end)||time.timezone!=='Asia/Kolkata'||(time.color!==undefined&&!plannerColors.includes(time.color))))return base;
+  if(JSON.stringify(task.plannedTime)===JSON.stringify(time))return base;
+  task.plannedTime=time===null?null:structuredClone(time);break;
+ }
  case 'view':if(!viewValues.includes(a.view)||s.lastView===a.view)return base;s.lastView=a.view;break;
  case 'trackerCheck':{
   const tracker=s.trackers?.find(value=>value.id===a.id),stamp=dayFromKey(a.day);
-  if(!tracker||stamp===null||stamp>dayFromKey(dayKey(now))||!Number.isInteger(a.slot)||a.slot<0||a.slot>=trackerSlots||typeof a.checked!=='boolean')return base;
+  if(!tracker||stamp===null||stamp>dayFromKey(trackerToday(now))||!Number.isInteger(a.slot)||a.slot<0||a.slot>=trackerSlots||typeof a.checked!=='boolean')return base;
   const mask=trackerMask(tracker,a.day),bit=1<<a.slot,next=a.checked?mask|bit:mask&~bit;
   if(mask===next)return base;
   if(!Object.hasOwn(tracker.days,a.day)&&Object.keys(tracker.days).length>=4000)return base;
@@ -146,12 +162,12 @@ export function reduce(state,a,now=Date.now()){
  case 'welcome':s.welcomed=true;break;
  default:return base;
  }
- return updateTaskHistory(s,now);
+ return updateTaskHistory(reconcileCampaign(s,now),now);
 }
 export function canNudge(s,now){const h=new Date(now).getHours(),c=s.settings;const inHours=c.startHour===c.endHour?true:c.startHour<c.endHour?h>=c.startHour&&h<c.endHour:h>=c.startHour||h<c.endHour;return inHours&&!c.quiet&&now>=c.pausedUntil&&!(s.timer.running&&s.timer.mode==='focus')&&(s.nudgeSnooze?now>=s.nudgeSnooze:now-s.lastNudge>=minute&&(s.reminders?.some(r=>r.enabled&&now-r.lastFired>=r.intervalMinutes*minute)||now-s.lastNudge>=c.nudgeMinutes*minute&&s.reminders===undefined))&&(s.reminders?.some(r=>r.enabled)??messages.some(m=>c.categories[m.kind]));}
 export function advance(state,now=Date.now()){
  let s=state;const mutate=()=>{if(s===state)s=structuredClone(state);};
- const observed=updateTaskHistory(state,now);if(observed!==state)s=structuredClone(observed);
+ const observed=updateTaskHistory(reconcileCampaign(state,now),now);if(observed!==state)s=structuredClone(observed);
  if(s.timer.running&&remaining(s.timer,now)===0){mutate();const t=s.timer;t.completedAt=now;if(t.mode==='focus'){t.sessions++;t.mode=t.sessions%4===0?'long':'short';}else t.mode='focus';t.seconds=durations(s,t.mode);t.running=false;t.startedAt=null;if(!s.alert)s.alert=timerNotice(t.mode,now);else s.pendingTimerMode=t.mode;}
  if(s.alert?.kind==='event'&&(now-s.alert.at>=3000||!s.events.some(e=>`${e.id}:${e.start}`===s.alert.key&&e.end>now))){mutate();s.alert=null;}
  if(s.alert?.kind==='task'&&!s.tasks.some(t=>`${t.id}:${t.due}`===s.alert.key&&!t.done)){mutate();s.alert=null;}

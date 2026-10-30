@@ -50,3 +50,12 @@ test('explicit unlink invalidates a dirty draft even while its task remains, and
  flush(false);
  assert.deepEqual(writes,[{title:'Updated review',start:base,end:base+90*60000}]);
 });
+
+test('local campaign draft times stay on the IST day independently of the host timezone',async()=>{
+ const {eventDraft,eventDraftUpdate}=await import('../src/event-details.mjs');
+ const base=Date.parse('2026-10-31T20:00:00Z'),saved={title:'Review',start:'12:00',end:'14:00'},draft={...saved,end:'14:15'};
+ assert.deepEqual(eventDraft(draft,base,'Asia/Kolkata'),{title:'Review',start:Date.parse('2026-11-01T06:30:00Z'),end:Date.parse('2026-11-01T08:45:00Z')});
+ assert.deepEqual(eventDraftUpdate(draft,saved,base,true,true,false,'Asia/Kolkata'),{title:'Review',start:Date.parse('2026-11-01T06:30:00Z'),end:Date.parse('2026-11-01T08:45:00Z')});
+ const midnight=eventDraft({title:'Late practice',start:'23:00',end:'00:00'},base,'Asia/Kolkata');
+ assert.deepEqual(midnight,{title:'Late practice',start:Date.parse('2026-11-01T17:30:00Z'),end:Date.parse('2026-11-01T18:30:00Z')});
+});

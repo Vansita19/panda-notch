@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var hotKey: EventHotKeyRef?
     var eventHandler: EventHandlerRef?
     let textCapture=TextCapture()
+    lazy var campaignBridge = CampaignBridge(publish: { [weak self] type, payload in self?.send(type, payload) })
     lazy var music:NowPlaying = {let reader=NowPlaying();reader.publish = { [weak self] type,payload in self?.send(type,payload) };return reader}()
     var menuBounds: CGRect = .zero
     var clipperBounds: CGRect = .zero
@@ -40,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var diskWarning: String?
     var shortcutError: String?
     var currentState: [String: Any]?
+    var campaignStateSaved = false
     lazy var calendarReader: CalendarReader = {
         let reader = CalendarReader()
         reader.selectedIDs = { [weak self] in (self?.currentState?["calendar"] as? [String:Any])?["selectedIds"] as? [String] ?? [] }
@@ -104,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             editMenu.addItem(item)
         }
         main.addItem(editItem);NSApp.mainMenu=main;registerShortcut()
-        ticker=Foundation.Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in guard let self,self.ready,!self.sleeping else{return};self.send("tick",Date().timeIntervalSince1970*1000);self.tickCount += 1;if self.tickCount % 15 == 0 {self.send("checkpoint")};if self.tickCount % 5 == 0 {self.music.refresh()};if self.tickCount % 60 == 0 && self.calendarReader.isConnected() {self.calendarReader.refresh()}}
+        ticker=Foundation.Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in guard let self,self.ready,!self.sleeping else{return};self.send("tick",Date().timeIntervalSince1970*1000);self.tickCount += 1;if self.tickCount % 15 == 0 {self.send("checkpoint")};if self.tickCount % 5 == 0 {self.music.refresh();self.campaignBridge.poll()};if self.tickCount % 60 == 0 && self.calendarReader.isConnected() {self.calendarReader.refresh()}}
         ticker?.tolerance=0.1
         NotificationCenter.default.addObserver(self,selector:#selector(screenChanged),name:NSApplication.didChangeScreenParametersNotification,object:nil)
         let center=NSWorkspace.shared.notificationCenter
@@ -147,7 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func resize(width:Double,height:Double){let screen=selectedScreen;let w=min(max(width,240),screen.frame.width-16),h=min(max(height,selectedScreen.safeAreaInsets.top > 0 ? selectedScreen.safeAreaInsets.top : 28),screen.frame.height-15);let rect=NSRect(x:screen.frame.midX-w/2,y:screen.frame.maxY-h,width:w,height:h);if abs(panel.frame.width-w)>0.5 || abs(panel.frame.height-h)>0.5 || abs(panel.frame.minX-rect.minX)>0.5 || abs(panel.frame.minY-rect.minY)>0.5 {panel.setFrame(rect,display:true)} }
     @objc func screenChanged(){resize(width:panel.frame.width,height:panel.frame.height);send("config",configuration())}
     @objc func willSleep(){send("sleep");sleeping=true;panel.orderOut(nil)}
-    @objc func didWake(){sleeping=false;send("wake");if calendarReader.isConnected(){calendarReader.refresh()};send("tick",Date().timeIntervalSince1970*1000);screenChanged();panel.orderFrontRegardless()}
+    @objc func didWake(){sleeping=false;send("wake");if ready{campaignBridge.poll(force:true)};if calendarReader.isConnected(){calendarReader.refresh()};send("tick",Date().timeIntervalSince1970*1000);screenChanged();panel.orderFrontRegardless()}
     func focusPanel(){
         if !NSApp.isActive { NSApp.activate(ignoringOtherApps:true) }
         panel.makeKey()
@@ -177,7 +179,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func userContentController(_ userContentController: WKUserContentController,didReceive message:WKScriptMessage){
         guard message.frameInfo.isMainFrame,let url=message.frameInfo.request.url,url.isFileURL,url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path+"/"),let body=message.body as? [String:Any],let type=body["type"] as? String else{return}
         switch type {
-        case "ready":ready=true;send("config",configuration());music.configure((currentState?["settings"] as? [String:Any])?["musicEnabled"] as? Bool ?? false);if calendarReader.isConnected() {calendarReader.connect()} else {calendarReader.refresh()}
+        case "ready":ready=true;send("config",configuration());campaignBridge.poll(force:true);music.configure((currentState?["settings"] as? [String:Any])?["musicEnabled"] as? Bool ?? false);if calendarReader.isConnected() {calendarReader.connect()} else {calendarReader.refresh()}
+        case "campaignProgress":if campaignStateSaved,let progress=body["progress"] as? [String:Any]{campaignBridge.exportProgress(progress)}
         case "addPinFiles":addPinFiles()
         case "preparePinDrag":if NSEvent.pressedMouseButtons & 1 != 0,let id=body["id"] as? String{pendingPinURL=pinFile(id)}
         case "openPin":if let id=body["id"] as? String,let p=pinRecord(id),p["kind"] as? String == "link",let text=p["url"] as? String,let url=URL(string:text),(["http","https"].contains(url.scheme?.lowercased() ?? "") || (url.isFileURL && (url.host == nil || url.host == "" || url.host == "localhost"))){NSWorkspace.shared.open(url)}
@@ -213,12 +216,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         lastSoundAt=Date();activeSound?.stop();activeSound=sound;sound.volume=kind == "select" ? 1 : (["timer","reminder"].contains(kind) ? 0.85 : 0.45);sound.play()
     }
     func save(_ state:[String:Any]){
+        campaignStateSaved=false
         guard state["version"] as? Int == 1, state["tasks"] is [Any],JSONSerialization.isValidJSONObject(state) else{return}
         do{let data=try JSONSerialization.data(withJSONObject:state,options:[.sortedKeys]);guard data.count<5_000_000 else{throw CocoaError(.fileWriteOutOfSpace)}
             // Keep a previous valid version before atomically replacing the current state.
             if let previous=currentState,let old=try? JSONSerialization.data(withJSONObject:previous,options:[.sortedKeys]){try old.write(to:folder.appendingPathComponent("previous-state.json"),options:.atomic)}
             let previousCalendar = Self.json(currentState?["calendar"] ?? NSNull())
-            try data.write(to:stateURL,options:.atomic);currentState=state;send("saved")
+            try data.write(to:stateURL,options:.atomic);currentState=state;campaignStateSaved=true;send("saved")
             if previousCalendar != Self.json(state["calendar"] ?? NSNull()) {calendarReader.refresh()}
         }catch{send("error","Panda couldn’t save to disk. Export a backup before quitting.")}
     }

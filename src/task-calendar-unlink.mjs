@@ -1,4 +1,5 @@
 import {validSlot} from './planner.mjs';
+import {taskSchedule} from './task-schedule.mjs';
 
 /** Remove owned time after provider confirmation, keeping the task and returning one-shot Undo.
  * @param {any} task
@@ -6,6 +7,18 @@ import {validSlot} from './planner.mjs';
  * @returns {Promise<()=>Promise<void>>}
  */
 export async function unlinkCalendarTaskTime(task,{native=false,writeCalendar,dispatch,getTask}){
+ if(taskSchedule(task)?.local){
+  const id=task.id,time={...task.plannedTime};
+  dispatch({type:'taskPlannedTime',id,time:null});
+  let used=false;
+  return async()=>{
+   if(used)return;used=true;
+   const current=getTask(id);
+   if(!current)throw new Error('This task no longer exists. Its time cannot be restored.');
+   if(taskSchedule(current)||current.plannedTime)throw new Error('This task is already scheduled. Its current time was kept.');
+   dispatch({type:'taskPlannedTime',id,time});
+  };
+ }
  if(!task?.calendarLink)throw new Error('This task has no scheduled time to remove.');
  const id=task.id,link={...task.calendarLink};
  if(native){const result=await writeCalendar?.({operation:'remove',taskId:id});if(!result?.removed)throw new Error('Calendar did not confirm removal. Your task and time are unchanged.');}
@@ -15,7 +28,7 @@ export async function unlinkCalendarTaskTime(task,{native=false,writeCalendar,di
   if(used)return;used=true;
   const current=getTask(id);
   if(!current)throw new Error('This task no longer exists. Its time cannot be restored.');
-  if(current.calendarLink)throw new Error('This task is already scheduled. Its current time was kept.');
+  if(current.calendarLink||current.plannedTime)throw new Error('This task is already scheduled. Its current time was kept.');
   let restored={...link};
   if(native){
    try{

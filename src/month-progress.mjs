@@ -1,3 +1,4 @@
+import {campaignDate,campaignTaskVisible} from './campaign.mjs';
 const historyLimit=3660;
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
 export function localDayKey(now=Date.now()){
@@ -11,7 +12,7 @@ export function dayFromKey(key){
 }
 export function liveTaskProgress(tasks,now=Date.now()){
  const today=localDayKey(now);let done=0,total=0;
- for(const task of tasks){if(!task.done||task.completedDay===today){total++;if(task.done)done++;}}
+ for(const task of tasks){if(campaignTaskVisible(task,now)&&(!task.done||(task.campaign?.campaign_id==='november-2026'?task.campaign.date===campaignDate(now):task.completedDay===today))){total++;if(task.done)done++;}}
  return {done,total};
 }
 export function validTaskHistory(history,day){

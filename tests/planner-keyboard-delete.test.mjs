@@ -81,3 +81,9 @@ test('linked calendar blocks explicitly join Mac keyboard navigation',t=>{
  const button=walk(f.tree,node=>node.type==='button'&&node.props?.['aria-label']?.startsWith(`${task.title}, `));
  assert.ok(button);assert.equal(button.props.tabIndex,0);assert.equal(button.props['aria-keyshortcuts'],'Delete Backspace');
 });
+
+test('disconnected Calendar permits local block removal and passes the untouched local task to callbacks',async t=>{
+ const f=fixture(t),task=f.state.tasks[0];delete task.calendarLink;task.campaign={campaign_id:'november-2026',slot:'portfolio'};task.plannedTime={start:now,end:now+3600000,timezone:'Asia/Kolkata'};f.state.calendar.mode='off';f.render();
+ const event=f.event(f.target(task.id,'event'));await f.press(event);
+ assert.equal(event.defaultPrevented,true);assert.equal(f.deletedTimes.length,1);assert.equal(f.deletedTimes[0],task);assert.equal(f.deletedTimes[0].calendarLink,undefined);assert.deepEqual(f.deletedTasks,[]);
+});

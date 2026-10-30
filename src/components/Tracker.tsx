@@ -2,7 +2,7 @@ import React,{useLayoutEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowUpRight,Check,ChevronLeft,ChevronRight,Pencil,Plus,X} from 'lucide-react';
 import {Checkbox} from '../arc/checkbox/checkbox';
 import {dayFromKey,localDayKey} from '../month-progress.mjs';
-import {recordedTrackerDays,shiftTrackerDay,trackerCount,trackerLimit,trackerMask,trackerTitle} from '../tracker.mjs';
+import {recordedTrackerDays,shiftTrackerDay,trackerCount,trackerLimit,trackerMask,trackerTitle,trackerToday} from '../tracker.mjs';
 import './tracker.css';
 
 type Habit={id:string;title:string;slots:number;created:number;days:Record<string,number>};
@@ -45,7 +45,7 @@ function TrackerNameForm({initial='',label,onSave,onCancel}:{initial?:string;lab
 }
 
 export function Tracker({trackers,now,dispatch,notify}:{trackers:Habit[];now:number;dispatch:Dispatch;notify:(message:string,undo?:()=>void)=>void}){
- const today=localDayKey(now),[selected,setSelected]=useState<string|null>(null),[history,setHistory]=useState(false),[editing,setEditing]=useState<string|null>(null),[adding,setAdding]=useState(false);
+ const today=trackerToday(now),[selected,setSelected]=useState<string|null>(null),[history,setHistory]=useState(false),[editing,setEditing]=useState<string|null>(null),[adding,setAdding]=useState(false);
  const addButton=useRef<HTMLButtonElement>(null),day=selected??today;
  const formOpen=adding||editing!==null,hadForm=useRef(formOpen);
  useLayoutEffect(()=>{if(hadForm.current&&!formOpen)addButton.current?.focus();hadForm.current=formOpen;},[formOpen]);

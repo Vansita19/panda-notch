@@ -1,6 +1,11 @@
-// Calendar geometry is local-time based. No timers or physics run in this module.
+import {taskSchedule} from './task-schedule.mjs';
+// Calendar geometry defaults to host time; campaign routines use their fixed IST day.
 export const plannerColors=['#62a8ff','#b698ff','#efab78','#7bc6a4','#ef8fa4'];
-export function dayRange(now=Date.now(),startHour=7,endHour=23){
+export function dayRange(now=Date.now(),startHour=7,endHour=23,timezone){
+ if(timezone==='Asia/Kolkata'){
+  const date=new Date(now+19800000);date.setUTCHours(0,0,0,0);const midnight=+date-19800000;
+  return {start:midnight+startHour*3600000,end:midnight+endHour*3600000};
+ }
  const start=new Date(now),end=new Date(now);start.setHours(startHour,0,0,0);end.setHours(endHour,0,0,0);return {start:+start,end:+end};
 }
 export function slotAt(y,height,range,duration=30*60000){
@@ -44,15 +49,15 @@ export function mergePlannerEvents(events=[],tasks=[],preview=null){
  for(const event of events){
   if(!event.taskId){result.push(event);continue;}
   if(byTask.has(event.taskId))continue;
-  const task=visibleTask.get(event.taskId),link=task?.calendarLink;
+  const task=visibleTask.get(event.taskId),link=taskSchedule(task);
   // A write acknowledgement updates the task before EventKit's next snapshot arrives.
-  if(task&&(!link||link.missing||!validSlot(link.start,link.end)))continue;
-  const canonical=task?{start:link.start,end:link.end,title:task.title,allDay:false}:{};
-  byTask.set(event.taskId,result.length);result.push({...event,...canonical,id:'task:'+event.taskId});
+  if(task&&!link)continue;
+  const canonical=task?{...link,title:task.title,allDay:false}:{};
+  byTask.set(event.taskId,result.length);result.push({...(!link?.local?event:{taskId:event.taskId}),...canonical,id:'task:'+event.taskId});
  }
  for(const task of tasks){
-  const link=task.calendarLink;
-  if(!link||link.missing||byTask.has(task.id)||!validSlot(link.start,link.end))continue;
+  const link=taskSchedule(task);
+  if(!link||byTask.has(task.id))continue;
   byTask.set(task.id,result.length);result.push({...link,id:'task:'+task.id,taskId:task.id,title:task.title,allDay:false});
  }
  if(preview?.taskId&&validSlot(preview.start,preview.end)){

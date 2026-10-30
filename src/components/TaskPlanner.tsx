@@ -5,6 +5,7 @@ import {host,native} from '../bridge';
 import {writeCalendar} from '../calendar-write';
 import {dayRange,timeAt,hoverHourAt,selectionRange,moveRange,layoutEvents,mergePlannerEvents,plannerColors,validSlot} from '../planner.mjs';
 import {visibleTasks} from '../model.mjs';
+import {taskSchedule} from '../task-schedule.mjs';
 import {isDeleteKeyEvent} from '../task-delete-key.mjs';
 import {plannerMoveDelta,plannerHourLabel} from '../planner-viewport.mjs';
 import {usePlannerConnections,plannerThreadAtPoint} from './usePlannerConnections';
@@ -12,8 +13,9 @@ import {TaskPriorityChoices} from './TaskPriority';
 import {NewEventComposer} from './NewEventComposer';
 import {eventDraftUpdate,stepEventTime,anchoredPosition} from '../event-details.mjs';
 import './task-planner.css';
-const clock=(ms:number)=>new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-const inputTime=(ms:number)=>{const d=new Date(ms);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+const formatClock=(ms:number,timezone?:string)=>new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true,...(timezone?{timeZone:timezone}:{})});
+const inputTime=(ms:number,timezone?:string)=>{if(timezone)return new Intl.DateTimeFormat('en-GB',{timeZone:timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(ms);const d=new Date(ms);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+const usesLocalTime=(task:any)=>!!taskSchedule(task)?.local||!task?.calendarLink&&task?.campaign?.campaign_id==='november-2026';
 export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,renderTasks,notify,now,heading='Today',onCreateTask,onDeleteTask,onDeleteCalendarTime,editingTask}:any){
  const isLayoutActive=layoutActive??active;
  const [calendarId,setCalendarId]=useState(''),[busy,setBusy]=useState<string|null>(null),[error,setError]=useState(''),[selected,setSelected]=useState<string|null>(null),[selectedAnchor,setSelectedAnchor]=useState<'task'|'calendar'>('calendar'),[editorFloor,setEditorFloor]=useState(0),[linking,setLinking]=useState<string|null>(null),[ghost,setGhost]=useState<any>(null),[preview,setPreview]=useState<any>(null),[hoveredTask,setHoveredTask]=useState<string|null>(null),[docking,setDocking]=useState<string|null>(null),[manipulating,setManipulating]=useState<string|null>(null);
@@ -22,10 +24,12 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
  const nodeRefs=useRef(new Map<string,HTMLElement>()),blockRefs=useRef(new Map<string,HTMLElement>()),dockFrame=useRef(0),dockFrom=useRef<any>(null),requestVersion=useRef(0),busyRef=useRef<string|null>(null);
  const hoveredTaskRef=useRef<string|null>(null),removalGuard=useRef<{invalidate:()=>boolean;restore:()=>void}|null>(null);
  const [creating,setCreating]=useState<{start:number;end:number}|null>(null),ghostAnchor=useRef<HTMLDivElement>(null),calendarPoint=useRef<number|null>(null);
- const startHour=s.settings.plannerStart??7,endHour=s.settings.plannerEnd??23,range=dayRange(now,startHour,endHour);
+ const tasks=visibleTasks(s,now),timezone=tasks.some((task:any)=>usesLocalTime(task))?'Asia/Kolkata':undefined;
+ const startHour=s.settings.plannerStart??7,endHour=s.settings.plannerEnd??23,range=dayRange(now,startHour,endHour,timezone);
+ const clock=(ms:number)=>formatClock(ms,timezone);
  const writable=(info.calendars??[]).filter((c:any)=>c.writable&&s.calendar.selectedIds.includes(c.id));
  useEffect(()=>{if(!writable.some((c:any)=>c.id===calendarId))setCalendarId(writable.find((c:any)=>c.id===info.defaultCalendarId)?.id||writable[0]?.id||'');},[JSON.stringify(writable),info.defaultCalendarId,calendarId]);
- const tasks=visibleTasks(s,now),events=layoutEvents(mergePlannerEvents(s.events,tasks,preview),range),current=tasks.find((t:any)=>t.id===selected);
+ const events=layoutEvents(mergePlannerEvents(s.events,tasks,preview),range),current=tasks.find((t:any)=>t.id===selected);
  const layoutKey=JSON.stringify([active,startHour,endHour,tasks.map((t:any)=>[t.id,t.title]),events.map((e:any)=>[e.taskId||e.id,e.top,e.height,e.lane,e.lanes])]);
  const connections=usePlannerConnections(root,nodeRefs,blockRefs,isLayoutActive,layoutKey,calendarViewport);
  const highlightedTask=linking||manipulating||busy||docking||hoveredTask||selected;
@@ -39,6 +43,7 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   hoverTask(plannerThreadAtPoint(workspace.querySelectorAll<SVGPathElement>('path.saved-thread-hit'),{x:event.clientX-rect.left,y:event.clientY-rect.top}));
  };
  const canWrite=!native||s.calendar.mode==='connected'&&!!calendarId;
+ const canEditTime=(task:any)=>canWrite||usesLocalTime(task);
  const stopGesture=(keepPath=false)=>{if(raf.current)cancelAnimationFrame(raf.current);raf.current=0;interaction.current=null;spring.current=null;keyboard.current=null;if(!keepPath)path.current?.setAttribute('d','');tip.current?.setAttribute('visibility','hidden');setGhost(null);setLinking(null);setManipulating(null);};
  const clear=()=>{stopGesture();setCreating(null);if(dockFrame.current)cancelAnimationFrame(dockFrame.current);dockFrame.current=0;dockFrom.current=null;setDocking(null);setPreview((p:any)=>p?.phase==='saving'||p?.phase==='committed'?p:null);};
  const closeCreation=()=>{clear();grid.current?.focus({preventScroll:true});};
@@ -58,19 +63,24 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   }else clear();
   try{
    let acknowledged=slot;
-   if(native){const result=await writeCalendar({operation,taskId:task.id,title:task.title,calendarId:task.calendarLink?.calendarId||calendarId,...slot});if(result.event)acknowledged={start:result.event.start,end:result.event.end};}
+   const local=usesLocalTime(task);
+   if(local){
+    if(operation==='remove'&&onDeleteCalendarTime){const result=await onDeleteCalendarTime(task);if(result?.ok===false)return result;}
+    else dispatch({type:'taskPlannedTime',id:task.id,time:operation==='remove'?null:{start:slot.start,end:slot.end,timezone:'Asia/Kolkata',...(task.plannedTime?.color?{color:task.plannedTime.color}:{})}});
+   }
+   else if(native){const result=await writeCalendar({operation,taskId:task.id,title:task.title,calendarId:task.calendarLink?.calendarId||calendarId,...slot});if(result.event)acknowledged={start:result.event.start,end:result.event.end};}
    else if(operation==='remove')dispatch({type:'taskCalendarUnlinked',id:task.id});
    else dispatch({type:'taskCalendarLinked',id:task.id,link:{eventId:task.calendarLink?.eventId||crypto.randomUUID(),calendarId:'preview',...slot,missing:false}});
    if(version!==requestVersion.current)return;
    if(operation==='save')setPreview({taskId:task.id,title:task.title,...acknowledged,phase:'committed'});
    else setSelected(null);
-   if(operation==='remove')notify('Time unlinked. Your task is still here.');
+   if(operation==='remove'&&!(local&&onDeleteCalendarTime))notify('Time unlinked. Your task is still here.');
    return {ok:true,slot:acknowledged,title:task.title};
   }catch(e:any){if(version===requestVersion.current){clear();setPreview(null);setError(e.message);}return {ok:false,error:e.message};}
   finally{if(version===requestVersion.current){busyRef.current=null;setBusy(null);}}
  };
  // Acknowledgement replaces only the preview's data; the task-keyed block stays mounted.
- useLayoutEffect(()=>{if(preview?.phase!=='committed')return;const link=tasks.find((t:any)=>t.id===preview.taskId)?.calendarLink;if(link&&link.start===preview.start&&link.end===preview.end)setPreview(null);},[preview,s.tasks]);
+ useLayoutEffect(()=>{if(preview?.phase!=='committed')return;const link=taskSchedule(tasks.find((t:any)=>t.id===preview.taskId));if(link&&link.start===preview.start&&link.end===preview.end)setPreview(null);},[preview,s.tasks]);
  // Ease the loose end onto its block instead of dropping the cord at pointer-up.
  useLayoutEffect(()=>{
   if(!docking||!dockFrom.current||!root.current)return;
@@ -98,7 +108,7 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
    const viewport=calendarViewport.current?.getBoundingClientRect()||rect;
    const inside=p.x>=rect.left+40&&p.x<=rect.right&&p.y>=Math.max(rect.top,viewport.top)&&p.y<=Math.min(rect.bottom,viewport.bottom);
    if(d.mode==='armed')updateGhost(inside?{...hoverHourAt(p.y-rect.top,rect.height,latest.current.range),selecting:false}:null);
-   else if(d.mode!=='move-pending'){const t=timeAt(p.y-rect.top,rect.height,latest.current.range);const slot=d.mode==='move'?moveRange(d.task.calendarLink.start,d.task.calendarLink.end,plannerMoveDelta(p.y,rect.top,d.originGridY,rect.height,latest.current.range.end-latest.current.range.start),latest.current.range):d.mode==='resize'?{start:d.task.calendarLink.start,end:Math.max(d.task.calendarLink.start+900000,t)}:selectionRange(d.anchor,t,latest.current.range);if(!slot)return;d.slot=slot;setGhost(null);setPreview((old:any)=>old?.taskId===d.task.id&&old?.start===slot.start&&old?.end===slot.end?old:{taskId:d.task.id,title:d.task.title,...slot,phase:d.mode==='move'?'moving':'selecting'});}
+   else if(d.mode!=='move-pending'){const t=timeAt(p.y-rect.top,rect.height,latest.current.range);const slot=d.mode==='move'?moveRange(d.time.start,d.time.end,plannerMoveDelta(p.y,rect.top,d.originGridY,rect.height,latest.current.range.end-latest.current.range.start),latest.current.range):d.mode==='resize'?{start:d.time.start,end:Math.max(d.time.start+900000,t)}:selectionRange(d.anchor,t,latest.current.range);if(!slot)return;d.slot=slot;setGhost(null);setPreview((old:any)=>old?.taskId===d.task.id&&old?.start===slot.start&&old?.end===slot.end?old:{taskId:d.task.id,title:d.task.title,...slot,phase:d.mode==='move'?'moving':'selecting'});}
   }
   if(d.mode==='resize'||d.mode==='move'||d.mode==='move-pending')return;
   const origin=d.node.getBoundingClientRect(),ax=origin.left+origin.width/2-r.left,ay=origin.top+origin.height/2-r.top,x=p.x-r.left,y=p.y-r.top;
@@ -115,17 +125,17 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
  const schedule=()=>{if(!raf.current)raf.current=requestAnimationFrame(draw);};
  useEffect(()=>{
   const move=(e:PointerEvent)=>{const d=interaction.current;if(!d||d.pointerId!==undefined&&d.pointerId!==e.pointerId)return;keyboard.current=null;d.pointer={x:e.clientX,y:e.clientY};if(d.mode==='move-pending'){if(Math.hypot(e.clientX-d.originX,e.clientY-d.originY)<4)return;d.mode='move';ignoreClick.current=d.task.id;}schedule();};
-  const finish=(e:PointerEvent)=>{const d=interaction.current;if(!d||d.mode==='armed'||d.pointerId!==undefined&&d.pointerId!==e.pointerId)return;if(d.mode==='move-pending'){stopGesture();return;}const rect=grid.current?.getBoundingClientRect();if(!rect)return;const t=timeAt(e.clientY-rect.top,rect.height,latest.current.range);const slot=d.mode==='move'?moveRange(d.task.calendarLink.start,d.task.calendarLink.end,plannerMoveDelta(e.clientY,rect.top,d.originGridY,rect.height,latest.current.range.end-latest.current.range.start),latest.current.range):d.mode==='resize'?{start:d.task.calendarLink.start,end:Math.max(d.task.calendarLink.start+900000,t)}:selectionRange(d.anchor,t,latest.current.range);if(!slot||d.mode==='move'&&slot.start===d.task.calendarLink.start&&slot.end===d.task.calendarLink.end){latest.current.clear();return;}if(d.mode==='create'){stopGesture();latest.current.openCreation(slot);return;}void latest.current.submit(d.task,slot);};
+  const finish=(e:PointerEvent)=>{const d=interaction.current;if(!d||d.mode==='armed'||d.pointerId!==undefined&&d.pointerId!==e.pointerId)return;if(d.mode==='move-pending'){stopGesture();return;}const rect=grid.current?.getBoundingClientRect();if(!rect)return;const t=timeAt(e.clientY-rect.top,rect.height,latest.current.range);const slot=d.mode==='move'?moveRange(d.time.start,d.time.end,plannerMoveDelta(e.clientY,rect.top,d.originGridY,rect.height,latest.current.range.end-latest.current.range.start),latest.current.range):d.mode==='resize'?{start:d.time.start,end:Math.max(d.time.start+900000,t)}:selectionRange(d.anchor,t,latest.current.range);if(!slot||d.mode==='move'&&slot.start===d.time.start&&slot.end===d.time.end){latest.current.clear();return;}if(d.mode==='create'){stopGesture();latest.current.openCreation(slot);return;}void latest.current.submit(d.task,slot);};
   const cancel=(e:KeyboardEvent)=>{if(e.key==='Escape'&&(interaction.current||selected||latest.current.creating)){e.preventDefault();e.stopImmediatePropagation();if(!busyRef.current){if(latest.current.creating)latest.current.closeCreation();else latest.current.clear();setSelected(null);}}};
   const pointerCancel=()=>latest.current.clear();
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',pointerCancel);window.addEventListener('keydown',cancel,true);
   return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',pointerCancel);window.removeEventListener('keydown',cancel,true);};
  },[selected]);
  const arm=(task:any,node:HTMLElement,x:number,y:number)=>{
-  if(!canWrite||busy||busyRef.current)return;if(interaction.current?.task?.id===task.id){clear();return;}
+  if(!canEditTime(task)||busy||busyRef.current)return;if(interaction.current?.task?.id===task.id){clear();return;}
   clear();setSelected(null);interaction.current={task,node,mode:'armed',pointer:{x,y}};setLinking(task.id);schedule();
  };
- const nodeForTask=(t:any)=><button type="button" className="thread-node" data-linked={!!t.calendarLink&&!t.calendarLink.missing} ref={el=>{if(el)nodeRefs.current.set(t.id,el);else nodeRefs.current.delete(t.id);}} hidden={!isLayoutActive} aria-label={`Link ${t.title} to calendar`} aria-pressed={linking===t.id} title="Click, then drag a time span on the calendar" disabled={!!busy||!canWrite} draggable={false} onDragStart={e=>e.preventDefault()} onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();arm(t,e.currentTarget,e.clientX,e.clientY);}} onClick={e=>{if(e.detail!==0)return;const r=e.currentTarget.getBoundingClientRect();arm(t,e.currentTarget,r.right,r.top+r.height/2);grid.current?.focus();}}><span/></button>;
+ const nodeForTask=(t:any)=><button type="button" className="thread-node" data-linked={!!taskSchedule(t)} ref={el=>{if(el)nodeRefs.current.set(t.id,el);else nodeRefs.current.delete(t.id);}} hidden={!isLayoutActive} aria-label={`Link ${t.title} to ${usesLocalTime(t)?'planner':'calendar'}`} aria-pressed={linking===t.id} title="Click, then drag a time span on the calendar" disabled={!!busy||!canEditTime(t)} draggable={false} onDragStart={e=>e.preventDefault()} onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();arm(t,e.currentTarget,e.clientX,e.clientY);}} onClick={e=>{if(e.detail!==0)return;const r=e.currentTarget.getBoundingClientRect();arm(t,e.currentTarget,r.right,r.top+r.height/2);grid.current?.focus();}}><span/></button>;
  const beginSelection=(e:React.PointerEvent)=>{
   const d=interaction.current;if(e.button!==0||!grid.current)return;
   const r=grid.current.getBoundingClientRect();if(e.clientX<r.left+40)return;
@@ -138,11 +148,11 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   e.preventDefault();e.stopPropagation();grid.current.setPointerCapture(e.pointerId);d.mode='select';d.pointerId=e.pointerId;d.anchor=timeAt(e.clientY-r.top,r.height,range);d.pointer={x:e.clientX,y:e.clientY};schedule();
  };
  const beginResize=(e:React.PointerEvent,t:any)=>{
-  if(e.button!==0||busy||busyRef.current||!canWrite)return;e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,mode:'resize',pointerId:e.pointerId,pointer:{x:e.clientX,y:e.clientY}};schedule();
+  const time=taskSchedule(t);if(e.button!==0||busy||busyRef.current||!canEditTime(t)||!time)return;e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,time,mode:'resize',pointerId:e.pointerId,pointer:{x:e.clientX,y:e.clientY}};schedule();
  };
  const beginMove=(e:React.PointerEvent,t:any)=>{
-  if(e.button!==0||busy||busyRef.current||linking||!canWrite||!t?.calendarLink||t.calendarLink.missing)return;
-  e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);ignoreClick.current=null;e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,mode:'move-pending',pointerId:e.pointerId,originX:e.clientX,originY:e.clientY,originGridY:e.clientY-(grid.current?.getBoundingClientRect().top??0),pointer:{x:e.clientX,y:e.clientY}};
+  const time=taskSchedule(t);if(e.button!==0||busy||busyRef.current||linking||!canEditTime(t)||!time)return;
+  e.preventDefault();e.stopPropagation();clear();setSelected(null);setManipulating(t.id);ignoreClick.current=null;e.currentTarget.setPointerCapture(e.pointerId);interaction.current={task:t,time,mode:'move-pending',pointerId:e.pointerId,originX:e.clientX,originY:e.clientY,originGridY:e.clientY-(grid.current?.getBoundingClientRect().top??0),pointer:{x:e.clientX,y:e.clientY}};
  };
  const keyboardSelection=(e:React.KeyboardEvent)=>{
   const d=interaction.current;
@@ -183,7 +193,7 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
   const task=latest.current.tasks.find((task:any)=>task.id===item.dataset.deleteTask),kind=item.dataset.deleteKind;
   if(!task||!['task','event'].includes(kind||''))return;
   const remove=kind==='event'?onDeleteCalendarTime:onDeleteTask;
-  if(!remove||kind==='event'&&(!canWrite||!task.calendarLink||task.calendarLink.missing))return;
+  if(!remove||kind==='event'&&(!canEditTime(task)||!taskSchedule(task)))return;
   event.preventDefault();event.stopPropagation();
   if(busyRef.current||interaction.current||creating||editingTask)return;
   const guard=removalGuard.current;if(guard&&!guard.invalidate())return;
@@ -212,24 +222,24 @@ export function TaskPlanner({s,info,dispatch,active,layoutActive,onToggle,render
    <div className="planner-hours"><select aria-label="Day starts" value={startHour} onChange={e=>dispatch({type:'settings',patch:{plannerStart:+e.target.value}})}>{Array.from({length:endHour},(_,h)=><option key={h} value={h}>{plannerHourLabel(h,true)}</option>)}</select><span>–</span><select aria-label="Day ends" value={endHour} onChange={e=>dispatch({type:'settings',patch:{plannerEnd:+e.target.value}})}>{Array.from({length:24-startHour},(_,i)=>i+startHour+1).map(h=><option key={h} value={h}>{plannerHourLabel(h,true)}</option>)}</select></div>
    <div className="planner-calendar-scroll" ref={calendarViewport} tabIndex={0} role="region" aria-label="Scrollable day calendar" onScroll={calendarScrolled}>
    {allDay.length>0&&<div className="planner-all-day">{allDay.map((e:any)=><span key={e.id}>{e.title} · all day</span>)}</div>}
-   <div className={`planner-grid ${linking?'accepting-thread':''}`} ref={grid} tabIndex={canWrite?0:-1} aria-label="Day calendar. Drag empty space to add an event. Use arrows to choose a time and Enter to name it. When linking a task, Enter starts and saves the span." onKeyDown={keyboardSelection} onPointerDownCapture={beginSelection} onPointerMove={calendarHover} onPointerLeave={()=>{if(!interaction.current&&!creating)updateGhost(null);}}>
+   <div className={`planner-grid ${linking?'accepting-thread':''}`} ref={grid} tabIndex={canWrite||timezone?0:-1} aria-label="Day calendar. Drag empty space to add an event. Use arrows to choose a time and Enter to name it. When linking a task, Enter starts and saves the span." onKeyDown={keyboardSelection} onPointerDownCapture={beginSelection} onPointerMove={calendarHover} onPointerLeave={()=>{if(!interaction.current&&!creating)updateGhost(null);}}>
     {hours.map((h,i)=><div className="planner-hour" style={{top:`${i/(hours.length-1)*100}%`}} key={h}><span>{plannerHourLabel(h)}</span><i/></div>)}
-    {events.map((e:any)=>{const t=tasks.find((t:any)=>t.id===e.taskId),color=t?.calendarLink?.color||'#62a8ff';return <div ref={el=>{if(!e.taskId)return;if(el)blockRefs.current.set(e.taskId,el);else blockRefs.current.delete(e.taskId);}} data-linked-task={e.taskId} data-delete-task={t?.id} data-delete-kind={t?'event':undefined} data-phase={e.phase} className={`planner-event ${highlightedTask===e.taskId?'is-connection-active':''} ${t?'linked-event':''} ${t?.done?'completed-event':''}`} key={e.id} style={{top:`${e.top*100}%`,height:`calc(${e.height*100}% - 1px)`,left:`calc(40px + (100% - 40px) * ${e.lane/e.lanes})`,width:`calc((100% - 40px) / ${e.lanes} - 3px)`,'--event-color':color} as React.CSSProperties}><button tabIndex={0} aria-keyshortcuts={t?'Delete Backspace':undefined} title={`${e.title} · ${clock(e.start)} – ${clock(e.end)}`} aria-label={`${e.title}, ${clock(e.start)} to ${clock(e.end)}`} draggable={false} onDragStart={ev=>ev.preventDefault()} onPointerDown={ev=>beginMove(ev,t)} onClick={ev=>{if(ignoreClick.current===e.taskId&&ev.detail!==0){ignoreClick.current=null;return;}if(linking)return;if(t){host('focus');ev.currentTarget.focus({preventScroll:true});setSelectedAnchor('calendar');setSelected(t.id);}else notify(`${e.title} · ${clock(e.start)}–${clock(e.end)}. Edit this event in Calendar.`);}}><strong>{t?.done?'✓ ':''}{e.title}</strong>{e.end-e.start>=3600000&&<span>{clock(e.start)} – {clock(e.end)}</span>}</button>{t&&!busy&&!linking&&<button className="planner-resize" aria-label={`Resize ${e.title}`} title="Drag to change duration" onPointerDown={ev=>beginResize(ev,t)}/>}</div>;})}
+    {events.map((e:any)=>{const t=tasks.find((t:any)=>t.id===e.taskId),color=taskSchedule(t)?.color||'#62a8ff';return <div ref={el=>{if(!e.taskId)return;if(el)blockRefs.current.set(e.taskId,el);else blockRefs.current.delete(e.taskId);}} data-linked-task={e.taskId} data-delete-task={t?.id} data-delete-kind={t?'event':undefined} data-phase={e.phase} className={`planner-event ${highlightedTask===e.taskId?'is-connection-active':''} ${t?'linked-event':''} ${t?.done?'completed-event':''}`} key={e.id} style={{top:`${e.top*100}%`,height:`calc(${e.height*100}% - 1px)`,left:`calc(40px + (100% - 40px) * ${e.lane/e.lanes})`,width:`calc((100% - 40px) / ${e.lanes} - 3px)`,'--event-color':color} as React.CSSProperties}><button tabIndex={0} aria-keyshortcuts={t?'Delete Backspace':undefined} title={`${e.title} · ${clock(e.start)} – ${clock(e.end)}`} aria-label={`${e.title}, ${clock(e.start)} to ${clock(e.end)}`} draggable={false} onDragStart={ev=>ev.preventDefault()} onPointerDown={ev=>beginMove(ev,t)} onClick={ev=>{if(ignoreClick.current===e.taskId&&ev.detail!==0){ignoreClick.current=null;return;}if(linking)return;if(t){host('focus');ev.currentTarget.focus({preventScroll:true});setSelectedAnchor('calendar');setSelected(t.id);}else notify(`${e.title} · ${clock(e.start)}–${clock(e.end)}. Edit this event in Calendar.`);}}><strong>{t?.done?'✓ ':''}{e.title}</strong>{e.end-e.start>=3600000&&<span>{clock(e.start)} – {clock(e.end)}</span>}</button>{t&&!busy&&!linking&&<button className="planner-resize" aria-label={`Resize ${e.title}`} title="Drag to change duration" onPointerDown={ev=>beginResize(ev,t)}/>}</div>;})}
     {now>range.start&&now<range.end&&<div className="planner-now" style={{top:`${(now-range.start)/(range.end-range.start)*100}%`}}><i/></div>}
     {ghost&&<div className="planner-ghost" ref={ghostAnchor} data-selecting={ghost.selecting} style={{top:`${(ghost.start-range.start)/(range.end-range.start)*100}%`,height:`${(ghost.end-ghost.start)/(range.end-range.start)*100}%`}}>{!ghost.selecting&&!linking&&onCreateTask&&<button type="button" className="planner-slot-add" aria-label={`Add event at ${clock(ghost.start)}`} title="Add event" onClick={()=>openCreation({start:ghost.start,end:ghost.end})}><Plus size={13}/></button>}</div>}
    </div>
-   {!canWrite&&<div className="planner-connect"><p>{info.status==='authorized'?'Select a writable calendar in Preferences to start planning.':'Connect Mac Calendar to start planning.'}</p><Button size="sm" variant="secondary" onClick={()=>{host('calendarConnect');notify('Choose your calendar in Preferences.');}}>Connect calendar</Button></div>}
+   {!canWrite&&<div className="planner-connect"><p>{timezone?'Your routine is planned in Panda. Connect Mac Calendar to add calendar events.':info.status==='authorized'?'Select a writable calendar in Preferences to start planning.':'Connect Mac Calendar to start planning.'}</p><Button size="sm" variant="secondary" onClick={()=>{host('calendarConnect');notify('Choose your calendar in Preferences.');}}>Connect calendar</Button></div>}
    </div>
   </section>
   {error&&<div className="planner-error" role="alert">{error}<button aria-label="Dismiss error" onClick={()=>setError('')}><X size={12}/></button></div>}
   <svg className="planner-thread" aria-hidden="true">{isLayoutActive&&connections.map(c=>{const hidden=linking===c.taskId||docking===c.taskId?'hidden':undefined;return <React.Fragment key={c.taskId}><path className={`saved-thread ${highlightedTask===c.taskId?'is-active':''}`} data-task-id={c.taskId} d={c.d} style={{visibility:hidden}}/><path className="saved-thread-hit" data-task-id={c.taskId} d={c.d} style={{visibility:hidden}}/><circle className={`saved-thread-endpoint ${highlightedTask===c.taskId?'is-active':''}`} data-task-id={c.taskId} cx={c.targetX} cy={c.targetY} r="3" style={{visibility:hidden}}/></React.Fragment>;})}<path className="loose-thread" ref={path}/><g ref={tip} visibility="hidden"><circle r="7"/><path d="M -3 0 H 3 M 0 -3 V 3"/></g></svg>
   {creating&&isLayoutActive&&<NewEventComposer slot={creating} root={root} anchor={()=>ghostAnchor.current} onCreate={createCalendarTask} onClose={closeCreation}/>}
-  {current&&(isLayoutActive||selectedAnchor==='task')&&<EventDetails key={current.id} removalGuard={removalGuard} focusTitle={selectedAnchor==='task'} task={current} now={now} busy={!!busy} root={root} constrainToPanel={isLayoutActive} anchor={()=>selectedAnchor==='task'?nodeRefs.current.get(current.id)?.closest<HTMLElement>('.task-row'):blockRefs.current.get(current.id)} onReserveHeight={(height:number)=>{if(!isLayoutActive)setEditorFloor(height);}} isTaskPresent={()=>latest.current.tasks.some((task:any)=>task.id===current.id)} onClose={()=>setSelected(null)} onSave={async(values:any)=>{if(validSlot(values.start,values.end)){const result=await submit({...current,title:values.title},values);if(result?.ok)dispatch({type:'edit',id:current.id,title:values.title});return result;}dispatch({type:'edit',id:current.id,title:values.title});return {ok:true,title:values.title};}} onUnlink={()=>submit(current,{},'remove')} onColor={(color:string)=>dispatch({type:'taskCalendarColor',id:current.id,color})} onPriority={(priority:string)=>dispatch({type:'taskPriority',id:current.id,priority})}/>}
+  {current&&(isLayoutActive||selectedAnchor==='task')&&<EventDetails key={current.id} removalGuard={removalGuard} focusTitle={selectedAnchor==='task'} task={current} now={now} busy={!!busy} root={root} constrainToPanel={isLayoutActive} anchor={()=>selectedAnchor==='task'?nodeRefs.current.get(current.id)?.closest<HTMLElement>('.task-row'):blockRefs.current.get(current.id)} onReserveHeight={(height:number)=>{if(!isLayoutActive)setEditorFloor(height);}} isTaskPresent={()=>latest.current.tasks.some((task:any)=>task.id===current.id)} onClose={()=>setSelected(null)} onSave={async(values:any)=>{if(validSlot(values.start,values.end)){const result=await submit({...current,title:values.title},values);if(result?.ok)dispatch({type:'edit',id:current.id,title:values.title});return result;}dispatch({type:'edit',id:current.id,title:values.title});return {ok:true,title:values.title};}} onUnlink={()=>submit(current,{},'remove')} onColor={(color:string)=>usesLocalTime(current)?dispatch({type:'taskPlannedTime',id:current.id,time:{...current.plannedTime,color}}):dispatch({type:'taskCalendarColor',id:current.id,color})} onPriority={(priority:string)=>dispatch({type:'taskPriority',id:current.id,priority})}/>}
  </div>;
 }
 function EventDetails({task,now,busy,root,removalGuard,focusTitle=true,constrainToPanel=false,anchor,onReserveHeight,isTaskPresent,onClose,onSave,onUnlink,onColor,onPriority}:any){
- const link=task.calendarLink;
- const initial=()=>({title:task.title,start:link?inputTime(link.start):'',end:link?inputTime(link.end):''});
+ const link=taskSchedule(task)||task.calendarLink,timezone=usesLocalTime(task)?'Asia/Kolkata':undefined;
+ const initial=()=>({title:task.title,start:link?inputTime(link.start,timezone):'',end:link?inputTime(link.end,timezone):''});
  const [draft,setDraft]=useState(initial),[confirm,setConfirm]=useState(false),[error,setError]=useState(''),[saving,setSaving]=useState(false);
  const titleInput=useRef<HTMLInputElement>(null);
  useLayoutEffect(()=>{if(focusTitle)titleInput.current?.focus();},[focusTitle]);
@@ -255,7 +265,7 @@ function EventDetails({task,now,busy,root,removalGuard,focusTitle=true,constrain
  },[root,task.id,anchor,constrainToPanel]);
  const commit=async(values=draftRef.current,reportInvalid=false)=>{
   if(timer.current)clearTimeout(timer.current);timer.current=null;
-  const current=latestDetails.current.task,result=eventDraftUpdate(values,saved.current,current.calendarLink?.start||latestDetails.current.now,latestDetails.current.isTaskPresent(),!!current.calendarLink&&!current.calendarLink.missing,invalidated.current);
+  const current=latestDetails.current.task,schedule=taskSchedule(current),timezone=usesLocalTime(current)?'Asia/Kolkata':undefined,result=eventDraftUpdate(values,saved.current,schedule?.start??latestDetails.current.now,latestDetails.current.isTaskPresent(),!!schedule,invalidated.current,timezone);
   if(!result){queued.current=false;if(mounted.current)setError('');return;}
   if(result.error){if(reportInvalid&&mounted.current)setError(result.error);return;}
   if(pending.current){queued.current=true;return;}
@@ -263,7 +273,7 @@ function EventDetails({task,now,busy,root,removalGuard,focusTitle=true,constrain
   try{
    const response=await latestDetails.current.onSave(result);
    if(!response?.ok){if(mounted.current)setError(response?.error||'Calendar could not save this change. Try again.');return;}
-   const next={title:response.title||result.title,start:response.slot?inputTime(response.slot.start):values.start,end:response.slot?inputTime(response.slot.end):values.end};
+   const next={title:response.title||result.title,start:response.slot?inputTime(response.slot.start,timezone):values.start,end:response.slot?inputTime(response.slot.end,timezone):values.end};
    saved.current=next;
    if(draftRef.current.title===values.title&&draftRef.current.start===values.start&&draftRef.current.end===values.end){draftRef.current=next;if(mounted.current)setDraft(next);}
   }catch(e:any){if(mounted.current)setError(e.message);}
@@ -293,6 +303,6 @@ function EventDetails({task,now,busy,root,removalGuard,focusTitle=true,constrain
   {link?.missing?<p>This event is no longer available. Unlink it to schedule again.</p>:<div className="event-time-fields">{timeField('start','Starts')}{timeField('end','Ends')}</div>}
   <TaskPriorityChoices priority={task.priority||'medium'} onChange={onPriority}/>
   <div className="event-save-status" role="status">{saving||busy?'Saving…':error?<span role="alert">{error}</span>:null}</div>
-  {link&&<><p className="event-color-label">Block color in Panda</p><div className="event-colors">{plannerColors.map(color=><button key={color} style={{background:color}} aria-label={`Use ${color} color`} aria-pressed={(link.color||plannerColors[0])===color} onClick={()=>onColor(color)}/>)}</div>{confirm?<div className="event-unlink-confirm"><p>Remove this event from Calendar? Your task stays here.</p><Button variant="ghost" size="sm" disabled={busy||saving} onClick={()=>setConfirm(false)}>Keep event</Button><Button variant="secondary" size="sm" disabled={busy||saving} onClick={unlink}>Remove event</Button></div>:<Button variant="ghost" size="sm" disabled={busy||saving} onClick={()=>link.missing?void unlink():setConfirm(true)}><Unlink size={12}/> Unlink time</Button>}</>}
+  {link&&<><p className="event-color-label">Block color in Panda</p><div className="event-colors">{plannerColors.map(color=><button key={color} style={{background:color}} aria-label={`Use ${color} color`} aria-pressed={(link.color||plannerColors[0])===color} onClick={()=>onColor(color)}/>)}</div>{confirm?<div className="event-unlink-confirm"><p>{link.local?'Remove this planned time? Your task stays here.':'Remove this event from Calendar? Your task stays here.'}</p><Button variant="ghost" size="sm" disabled={busy||saving} onClick={()=>setConfirm(false)}>{link.local?'Keep time':'Keep event'}</Button><Button variant="secondary" size="sm" disabled={busy||saving} onClick={unlink}>{link.local?'Remove time':'Remove event'}</Button></div>:<Button variant="ghost" size="sm" disabled={busy||saving} onClick={()=>link.missing?void unlink():setConfirm(true)}><Unlink size={12}/> Unlink time</Button>}</>}
  </div>;
 }
