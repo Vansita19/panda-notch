@@ -12,7 +12,7 @@ Useful reminders disappear when they live in another tab. Panda brings the next 
 
 ## What works
 
-- Tasks with completion progress beside the panda and a panel that grows with the list.
+- Tasks with a daily checklist and a panel that grows with the list.
 - A focus timer, short and long breaks, and optional sound.
 - Calendar access through macOS EventKit, requested explicitly by the app.
 - Ideas, saved links and files, and configurable reminders.
@@ -100,4 +100,6 @@ The All links tab stores reusable web links and local file copies. Compact rows 
 Ideas opens the current note as a clean writing canvas with an editable title. Drafts and existing-note edits save locally as you type. **All notes** shows a four-column grid of note cards with only the title and saved date; **Back** returns to the current note. Opening the grid saves a nonempty draft into the collection, and **New note** starts another canvas. Existing untitled notes use their first line as the card title without rewriting their content. Deleting a note offers Undo in the detached confirmation bubble.
 
 ### Copy text from screen
-Click the cursor beside the notch menu, or the menu-bar paw → **Copy text from screen…**. Drag a rectangle around the text; Escape cancels. Panda invokes macOS interactive screenshot selection directly, without the redundant full-screen permission preflight that could reject an enabled permission. macOS still controls capture access. Apple Vision recognizes the selected text locally and copies it for Command-V. No account or upload is involved; the temporary image is deleted after processing. Cancel leaves the clipboard unchanged. No window-sharing picker, continuous recording, or capture history is used.
+Choose **Menu → Screenshot Image**, or the menu-bar paw → **Copy text from screen…**. Drag a rectangle around the text; Escape cancels. Panda invokes macOS interactive screenshot selection directly, without the redundant full-screen permission preflight that could reject an enabled permission. macOS still controls capture access. Apple Vision recognizes the selected text locally and copies it for Command-V. No account or upload is involved; the temporary image is deleted after processing. Cancel leaves the clipboard unchanged. No window-sharing picker, continuous recording, or capture history is used.
+
+The resting notch uses a smaller camera-aware width with just the panda and menu; a running timer retains its countdown. Opening Panda restores the saved workspace width. **Menu → Screenshot Image** opens the existing screen text capture tool.

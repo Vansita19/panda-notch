@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createNotchMotion} from '../src/notch-motion.mjs';
+import * as notch from '../src/notch-motion.mjs';
 function fixture(){
  const surface={style:{},dataset:{}}, visual={style:{},animations:[],animate(frames,options){const a={frames,options,cancelled:false,cancel(){this.cancelled=true;}};this.animations.push(a);return a;}};
  const sizes=[],rest=[];
@@ -114,4 +115,14 @@ test('an explicit new view starts its own transition while observer retargets do
  assert.equal(f.visual.animations.at(-1).options.duration,280);
  stamp=150;m.to(420,{open:true,duration:280,width:400,transitionKey:'focus'});
  assert.equal(f.visual.animations.at(-1).options.duration,230);
+});
+
+
+test('resting width fits just the panda and menu while keeping both outside the physical camera',()=>{
+ assert.equal(typeof notch.restingNotchWidth,'function');
+ const width=notch.restingNotchWidth(180,false);
+ assert.ok(width<=260,'idle width does not reserve removed progress space');assert.ok((width-180-24)/2>=24,'each wing keeps a full control hit target');
+ assert.ok((notch.restingNotchWidth(240,false)-240-24)/2>=24,'larger physical cameras keep the same control clearance');
+ assert.ok((notch.restingNotchWidth(180,true)-180-24)/2>=74,'a running countdown stays outside the camera');
+ assert.equal(notch.restingNotchWidth(undefined,false),width);
 });

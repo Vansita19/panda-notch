@@ -96,3 +96,7 @@
 .menu-upcoming-event.is-secondary .menu-upcoming-time b{color:var(--panda-text-muted)}
 .menu-upcoming-event:focus-visible{outline:2px solid var(--panda-focus);outline-offset:2px}
 @media(hover:hover) and (pointer:fine){.menu-upcoming-event:hover .menu-upcoming-copy strong{color:#fff}.menu-upcoming-event.is-secondary:hover .menu-upcoming-copy strong{color:var(--panda-text-secondary)}}
+
+.menu-screenshot-action{display:inline-flex;align-items:center;gap:7px;min-height:30px;margin-block-start:12px;padding:5px 9px;border:1px solid var(--panda-border);border-radius:7px;background:var(--panda-surface);color:var(--panda-text-secondary);font:inherit;font-size:10px}
+.menu-screenshot-action:focus-visible{outline:2px solid var(--panda-focus);outline-offset:2px}
+@media(hover:hover){.menu-screenshot-action:hover{background:var(--panda-surface-raised);color:var(--panda-text-primary)}}

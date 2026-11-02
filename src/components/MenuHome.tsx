@@ -1,12 +1,12 @@
 import {useLayoutEffect,useRef,type KeyboardEvent} from 'react';
-import {ListChecks} from 'lucide-react';
+import {ListChecks,MousePointer2} from 'lucide-react';
 import {featureViews} from '../navigation';
 import {deriveMenuUpcoming} from '../menu-upcoming.mjs';
 import {createMenuCardMotion} from './menu-card-motion';
 import './menu-home.css';
 
 type MenuEvent={id:string;eventId?:string;calendarId?:string;title:string;start:number;end:number;allDay?:boolean;color?:string};
-type MenuHomeProps={onNavigate:(id:string)=>void;events:MenuEvent[];now:number;onOpenCalendar:()=>void;eventColor?:(event:MenuEvent)=>string|undefined};
+type MenuHomeProps={onNavigate:(id:string)=>void;events:MenuEvent[];now:number;onOpenCalendar:()=>void;eventColor?:(event:MenuEvent)=>string|undefined;onScreenshot?:()=>void};
 const asset=(name:string,className:string)=><img className={className} src={`menu/${name}.svg`} alt="" draggable={false}/>;
 const updateScrollEdges=(node:HTMLDivElement)=>{
  const maximum=Math.max(0,node.scrollWidth-node.clientWidth);
@@ -58,7 +58,7 @@ function CardArtwork({id,label}:{id:string;label:string}){
  </span>;
 }
 
-export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor}:MenuHomeProps){
+export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor,onScreenshot}:MenuHomeProps){
  const viewport=useRef<HTMLDivElement>(null);
  const ambient=useRef<ReturnType<typeof createMenuCardMotion>|null>(null);
  useLayoutEffect(()=>{ambient.current=createMenuCardMotion();return()=>{ambient.current?.dispose();ambient.current=null;};},[]);
@@ -101,6 +101,7 @@ export function MenuHome({onNavigate,events,now,onOpenCalendar,eventColor}:MenuH
   <div className="menu-home-scroll" ref={viewport} onKeyDown={navigateCards} onFocusCapture={event=>{if(event.target instanceof HTMLButtonElement)reveal(event.target);}}>
    {featureViews.map(card=><button className="menu-card" type="button" tabIndex={0} key={card.id} aria-label={card.title} onPointerEnter={e=>{if(e.pointerType==='mouse')ambient.current?.enter(e.currentTarget);}} onPointerMove={e=>{if(e.pointerType==='mouse')ambient.current?.enter(e.currentTarget);}} onPointerLeave={e=>ambient.current?.leave(e.currentTarget)} onClick={()=>onNavigate(card.id)}><CardArtwork id={card.id} label={card.title}/></button>)}
   </div>
+  {onScreenshot&&<button type="button" className="menu-screenshot-action" onClick={onScreenshot}><MousePointer2 size={14} aria-hidden="true"/> Screenshot Image</button>}
   {upcoming&&<section className="menu-upcoming-section" aria-label="Upcoming calendar events">
    <div className="menu-calendar-widget">
     <div className="menu-calendar-agenda"><h2>Upcoming{futureDay&&<span>{futureDay}</span>}</h2><ul>

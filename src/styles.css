@@ -191,10 +191,6 @@ html[data-input-modality=keyboard] .app-shell button:focus-visible{outline:none!
 .rail-leading .buddy-button{flex-shrink:0}
 .notch-rail>.menu-toggle{justify-self:end}
 .rail-leading .closed-timer{min-width:0;max-width:44px;font-size:11px;letter-spacing:0;white-space:nowrap}
-.closed-task-progress{display:flex;flex-direction:column;justify-content:center;gap:3px;height:24px;width:40px;min-width:0;padding:0;text-align:left;font-size:10px;line-height:1;font-variant-numeric:tabular-nums;color:var(--panda-text-secondary)}
-.progress-divider{padding:0 3px;color:var(--panda-text-subtle)}
-.mini-progress-track{display:block;width:100%;height:2px;border-radius:2px;background:#ffffff20;overflow:hidden}
-.mini-progress-track>span{display:block;width:100%;height:100%;border-radius:inherit;background:var(--panda-control-on);transform-origin:left;transition:transform .16s var(--panel-ease)}
 /* A compact continuous list, without dividers between to-dos. */
 .task-list{gap:1px}
 .task-row{border-bottom:0;min-height:36px;padding:1px 0}
@@ -205,9 +201,9 @@ html[data-input-modality=keyboard] .app-shell button:focus-visible{outline:none!
 .app-shell .notch-surface{width:400px;transition:none}
 
 .notch-rail{cursor:pointer}
-.closed-task-progress{flex-direction:row-reverse;align-items:center;gap:5px;width:auto;white-space:nowrap}
-.mini-progress-ring{width:14px;height:14px;flex-shrink:0;fill:none;stroke:#ffffff25;stroke-width:2.4}
-.mini-progress-ring .ring-fill{stroke:var(--panda-text-secondary);stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 160ms ease-out}
+.collapsed .notch-rail,.is-closing .notch-rail{padding-inline:12px}
+.rail-leading{gap:6px}
+.is-closing .open-content{width:var(--open-panel-width);align-self:center}
 .today-overview{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
 .today-overview:has(+.upcoming-event){justify-content:flex-end;margin:0 0 10px}
 .today-overview .simple-greeting{flex:1;min-width:0;gap:11px}
@@ -331,10 +327,7 @@ body{position:fixed;inset:0}
 .app-shell[data-view=today].is-open .notch-layout{height:auto;max-height:var(--screen-height)}
 .app-shell[data-view=today] .view-scroll{flex:0 1 auto;min-height:0;overflow-y:auto}
 
-/* Direct screen capture stays beside the menu in both notch states. */
-.rail-menu{width:auto;gap:10px;flex-shrink:0}
-.clipper-toggle{display:grid;place-items:center;width:24px;height:24px;flex:none;padding:0;border:0;border-radius:6px;background:transparent;color:var(--panda-text-secondary);cursor:pointer}
-.clipper-toggle:hover{color:var(--panda-text-primary);background:#ffffff0b}
+.rail-menu{width:24px;gap:0;flex-shrink:0}
 
 /* Let measured content drive the native window, not the previous viewport width. */
 .app-shell.native .notch-surface{max-width:none;transition:none}
@@ -395,3 +388,6 @@ body{position:fixed;inset:0}
 .toast-position>.toast{position:relative;inset:auto;width:max-content;max-width:min(372px,calc(100% - 28px));min-height:40px;margin:0;pointer-events:auto}
 .calendar-notice-layer{width:max-content;max-width:100%;min-width:0}
 .toast-position .toast-message{flex:0 1 auto;min-width:0;overflow-wrap:break-word}
+
+/* Cover art replaces the panda without widening the resting wing. */
+.collapsed .music-bars,.is-closing .music-bars{display:none}
