@@ -16,6 +16,12 @@ final class ClearWebView: WKWebView {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavigationDelegate, NSWindowDelegate, NSDraggingSource {
     var panel: PandaPanel!
+    private var workspace: NSWindow?
+    private var workspaceFrame: NSRect?
+    private var workspaceWindowedFrame: NSRect?
+    private var pendingDockExpansion: Bool?
+    private var workspaceTransitioning = false
+    private var workspaceOnReady = ProcessInfo.processInfo.arguments.contains("--workspace")
     var web: ClearWebView!
     var statusItem: NSStatusItem!
     var ticker: Foundation.Timer?
@@ -70,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let screen=selectedScreen
         let width:CGFloat
         if let l=screen.auxiliaryTopLeftArea,let r=screen.auxiliaryTopRightArea { width=max(0,r.minX-l.maxX) } else { width=180 }
-        var c:[String:Any] = ["safeTop":screen.safeAreaInsets.top,"notchWidth":width,"availableHeight":screen.frame.height-30,"launchAtLogin":SMAppService.mainApp.status == .enabled]
+        var c:[String:Any] = ["safeTop":screen.safeAreaInsets.top,"notchWidth":width,"availableHeight":screen.frame.height-30,"launchAtLogin":SMAppService.mainApp.status == .enabled,"workspaceSupported":true]
         if let w=diskWarning { c["storageWarning"]=w }
         if let w=shortcutError { c["shortcutError"]=w }
         return c
@@ -97,7 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         web.setValue(false,forKey:"drawsBackground")
         panel.contentView=web
         web.loadFileURL(webRoot.appendingPathComponent("index.html"),allowingReadAccessTo:webRoot)
-        resize(width:428,height:selectedScreen.safeAreaInsets.top > 0 ? selectedScreen.safeAreaInsets.top : 28);panel.orderFrontRegardless()
+        resize(width:428,height:selectedScreen.safeAreaInsets.top > 0 ? selectedScreen.safeAreaInsets.top : 28)
+        if !workspaceOnReady { panel.orderFrontRegardless() }
         createMenu();let main=NSMenu();let appItem=NSMenuItem();let appMenu=NSMenu();let quitItem=NSMenuItem(title:"Quit Panda",action:#selector(quit),keyEquivalent:"q");quitItem.target=self;appMenu.addItem(quitItem);appItem.submenu=appMenu;main.addItem(appItem);// WebKit routes Command-A/C/V/Z through the standard responder menu.
         let editItem=NSMenuItem();let editMenu=NSMenu(title:"Edit");editItem.submenu=editMenu
         for (title,action,key) in [("Undo","undo:","z"),("Redo","redo:","Z"),("Cut","cut:","x"),("Copy","copy:","c"),("Paste","paste:","v"),("Select All","selectAll:","a")] {
@@ -105,7 +112,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             item.keyEquivalentModifierMask=key == "Z" ? [.command,.shift] : [.command]
             editMenu.addItem(item)
         }
-        main.addItem(editItem);NSApp.mainMenu=main;registerShortcut()
+        main.addItem(editItem)
+        let windowItem = NSMenuItem()
+        let windowMenu = NSMenu(title: "Window")
+        windowMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windowItem.submenu = windowMenu
+        main.addItem(windowItem)
+        NSApp.mainMenu = main
+        NSApp.windowsMenu = windowMenu
+        registerShortcut()
         ticker=Foundation.Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in guard let self,self.ready,!self.sleeping else{return};self.send("tick",Date().timeIntervalSince1970*1000);self.tickCount += 1;if self.tickCount % 15 == 0 {self.send("checkpoint")};if self.tickCount % 5 == 0 {self.music.refresh();self.campaignBridge.poll()};if self.tickCount % 60 == 0 && self.calendarReader.isConnected() {self.calendarReader.refresh()}}
         ticker?.tolerance=0.1
         NotificationCenter.default.addObserver(self,selector:#selector(screenChanged),name:NSApplication.didChangeScreenParametersNotification,object:nil)
@@ -115,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(willSleep),name:NSNotification.Name("com.apple.screenIsLocked"),object:nil)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(didWake),name:NSNotification.Name("com.apple.screenIsUnlocked"),object:nil)
         pinDragMonitor=NSEvent.addLocalMonitorForEvents(matching:[.leftMouseDown,.leftMouseDragged,.leftMouseUp]){[weak self] event in
-            guard let self,event.window === self.panel else{return event}
+            guard let self, event.window === (self.workspace ?? self.panel) else { return event }
             if event.type == .leftMouseDown {self.pinMouseDown=event;self.pendingPinURL=nil}
             if event.type == .leftMouseUp {self.pinMouseDown=nil;self.pendingPinURL=nil}
             if event.type == .leftMouseDragged,let url=self.pendingPinURL,let down=self.pinMouseDown {
@@ -134,34 +149,192 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         outsideLocalMonitor=NSEvent.addLocalMonitorForEvents(matching:[.leftMouseDown,.rightMouseDown,.otherMouseDown]){[weak self] event in guard let self else{return event};if self.routeMenuClick(){return nil};self.dismissOutsideClick();return event}
     }
     func routeMenuClick()->Bool {
+        guard workspace == nil, panel.isVisible else { return false }
         let mouse=NSEvent.mouseLocation
         let point=CGPoint(x:mouse.x-panel.frame.minX,y:panel.frame.maxY-mouse.y)
         if clipperBounds.contains(point){captureText();return true}
         guard menuBounds.contains(point) else{return false}
         send("toggleMenu");return true
     }
-    func dismissOutsideClick(){guard expanded,!panel.frame.contains(NSEvent.mouseLocation) else{return};send("close")}
-    func windowDidResignKey(_ notification:Notification){if expanded {send("close")}}
-    func applicationDidResignActive(_ notification:Notification){if expanded {send("close")}}
-    @objc func captureText(){textCapture.capture(hide:{self.send("close");self.panel.orderOut(nil)}){[weak self] message in guard let self else{return};self.panel.orderFrontRegardless();self.send("open");self.send("pinMessage",message)}}
+    func dismissOutsideClick() {
+        guard workspace == nil, expanded, !panel.frame.contains(NSEvent.mouseLocation) else { return }
+        send("close")
+    }
+    func windowDidResignKey(_ notification: Notification) {
+        if workspace == nil, notification.object as? NSWindow === panel, expanded { send("close") }
+    }
+    func applicationDidResignActive(_ notification: Notification) {
+        if workspace == nil, expanded { send("close") }
+    }
+
+    @objc func openWorkspace() {
+        if let workspace {
+            focusWindow(workspace)
+            return
+        }
+        guard ready else {
+            workspaceOnReady = true
+            return
+        }
+
+        let screen = panel.screen ?? selectedScreen
+        let visible = screen.visibleFrame
+        let width = min(900, visible.width - 32)
+        let height = min(680, visible.height - 48)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false,
+            screen: screen
+        )
+        window.title = "Panda"
+        window.backgroundColor = NSColor(white: 0.04, alpha: 1)
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.contentMinSize = NSSize(width: min(420, width), height: min(320, height))
+        window.collectionBehavior.insert(.fullScreenPrimary)
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        let size = window.frame.size
+        let centered = NSRect(
+            x: visible.midX - size.width / 2,
+            y: visible.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+        let previous = workspaceFrame.flatMap { visible.contains($0) ? $0 : nil }
+        window.setFrame(previous ?? centered, display: false)
+
+        // Move the existing view so drafts, scroll positions and the timer stay live.
+        workspace = window
+        expanded = false
+        panel.orderOut(nil)
+        panel.contentView = nil
+        window.contentView = web
+        NSApp.setActivationPolicy(.regular)
+        send("workspace", ["active": true])
+        focusWindow(window)
+    }
+
+    private func dockWorkspace(expand: Bool) {
+        guard let workspace, pendingDockExpansion == nil else { return }
+        if workspaceTransitioning || workspace.styleMask.contains(.fullScreen) {
+            pendingDockExpansion = expand
+            if !workspaceTransitioning { workspace.toggleFullScreen(nil) }
+            return
+        }
+        finishDocking(workspace, expand: expand)
+    }
+
+    private func finishDocking(_ window: NSWindow, expand: Bool) {
+        workspaceFrame = workspaceWindowedFrame ?? window.frame
+        workspaceWindowedFrame = nil
+        pendingDockExpansion = nil
+        workspaceTransitioning = false
+        window.orderOut(nil)
+        window.delegate = nil
+        window.contentView = nil
+        panel.contentView = web
+        window.close()
+        workspace = nil
+
+        menuBounds = .zero
+        expanded = false
+        NSApp.setActivationPolicy(.accessory)
+        send("workspace", ["active": false, "expand": expand])
+        panel.orderFrontRegardless()
+        if expand { focusPanel() }
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard sender === workspace else { return true }
+        // Let AppKit finish dismissing the standard window before moving its view.
+        DispatchQueue.main.async { [weak self] in self?.dockWorkspace(expand: false) }
+        return false
+    }
+
+    func windowWillEnterFullScreen(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window === workspace else { return }
+        workspaceWindowedFrame = window.frame
+        workspaceTransitioning = true
+    }
+    func windowDidEnterFullScreen(_ notification: Notification) {
+        guard notification.object as? NSWindow === workspace else { return }
+        workspaceTransitioning = false
+        if pendingDockExpansion != nil { workspace?.toggleFullScreen(nil) }
+    }
+    func windowWillExitFullScreen(_ notification: Notification) {
+        if notification.object as? NSWindow === workspace { workspaceTransitioning = true }
+    }
+    func windowDidExitFullScreen(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window === workspace else { return }
+        workspaceTransitioning = false
+        if let expand = pendingDockExpansion { finishDocking(window, expand: expand) }
+        workspaceWindowedFrame = nil
+    }
+    func windowDidFailToEnterFullScreen(_ window: NSWindow) {
+        guard window === workspace else { return }
+        workspaceTransitioning = false
+        if let expand = pendingDockExpansion { finishDocking(window, expand: expand) }
+        workspaceWindowedFrame = nil
+    }
+    func windowDidFailToExitFullScreen(_ window: NSWindow) {
+        guard window === workspace else { return }
+        workspaceTransitioning = false
+        pendingDockExpansion = nil
+        send("pinMessage", "Exit full screen before moving Panda back to the notch.")
+    }
+
+    @objc func captureText() {
+        textCapture.capture(hide: {
+            if let workspace { workspace.orderOut(nil) }
+            else { send("close"); panel.orderOut(nil) }
+        }) { [weak self] message in
+            guard let self else { return }
+            if let workspace = self.workspace { self.focusWindow(workspace) }
+            else { self.panel.orderFrontRegardless(); self.send("open") }
+            self.send("pinMessage", message)
+        }
+    }
     static func json(_ x:Any)->String { guard JSONSerialization.isValidJSONObject(x) || x is NSNull,let data=try? JSONSerialization.data(withJSONObject:x,options:[.fragmentsAllowed,.sortedKeys]),let value=String(data:data,encoding:.utf8) else{return "null"};return value }
     func send(_ type:String,_ payload:Any=NSNull()) { guard web != nil else{return};let data=Self.json([type,payload]);web.evaluateJavaScript("window.pandaNative?.(...\(data))",completionHandler:nil) }
     func resize(width:Double,height:Double){let screen=selectedScreen;let w=min(max(width,240),screen.frame.width-16),h=min(max(height,selectedScreen.safeAreaInsets.top > 0 ? selectedScreen.safeAreaInsets.top : 28),screen.frame.height-15);let rect=NSRect(x:screen.frame.midX-w/2,y:screen.frame.maxY-h,width:w,height:h);if abs(panel.frame.width-w)>0.5 || abs(panel.frame.height-h)>0.5 || abs(panel.frame.minX-rect.minX)>0.5 || abs(panel.frame.minY-rect.minY)>0.5 {panel.setFrame(rect,display:true)} }
     @objc func screenChanged(){resize(width:panel.frame.width,height:panel.frame.height);send("config",configuration())}
     @objc func willSleep(){send("sleep");sleeping=true;panel.orderOut(nil)}
-    @objc func didWake(){sleeping=false;send("wake");if ready{campaignBridge.poll(force:true)};if calendarReader.isConnected(){calendarReader.refresh()};send("tick",Date().timeIntervalSince1970*1000);screenChanged();panel.orderFrontRegardless()}
-    func focusPanel(){
-        if !NSApp.isActive { NSApp.activate(ignoringOtherApps:true) }
-        panel.makeKey()
-        // Keep an existing WebKit field responder; otherwise route keystrokes into the web view.
-        if let responder=panel.firstResponder as? NSView, responder === web || responder.isDescendant(of:web) { return }
-        panel.makeFirstResponder(web)
+    @objc func didWake(){
+        sleeping=false;send("wake")
+        if ready { campaignBridge.poll(force:true) }
+        if calendarReader.isConnected() { calendarReader.refresh() }
+        send("tick", Date().timeIntervalSince1970 * 1000)
+        screenChanged()
+        if workspace == nil { panel.orderFrontRegardless() }
     }
-    @objc func openPanel(){panel.orderFrontRegardless();focusPanel();send("open")}
-    @objc func quickAdd(){panel.orderFrontRegardless();focusPanel();send("quickAdd")}
-    @objc func previewBanner(){panel.orderFrontRegardless();send("preview")}
+    private func focusWindow(_ window: NSWindow) {
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        if !NSApp.isActive { NSApp.activate(ignoringOtherApps: true) }
+        if window === panel { window.makeKey() }
+        else { window.makeKeyAndOrderFront(nil) }
+        // Keep an existing WebKit field responder when restoring focus.
+        if let responder=window.firstResponder as? NSView, responder === web || responder.isDescendant(of:web) { return }
+        window.makeFirstResponder(web)
+    }
+    func focusPanel() { focusWindow(workspace ?? panel) }
+    @objc func openPanel() {
+        if workspace == nil { panel.orderFrontRegardless() }
+        focusPanel()
+        if workspace == nil { send("open") }
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if ready { openPanel() }
+        return false
+    }
+    @objc func quickAdd(){if workspace == nil { panel.orderFrontRegardless() };focusPanel();send("quickAdd")}
+    @objc func previewBanner(){if workspace == nil { panel.orderFrontRegardless() };send("preview")}
     @objc func toggleQuiet(){send("quiet")}
-    @objc func hidePanel(){send("close");panel.orderOut(nil)}
+    @objc func hidePanel(){
+        if let workspace { workspace.orderOut(nil) }
+        else { send("close"); panel.orderOut(nil) }
+    }
     @objc func showData(){NSWorkspace.shared.open(folder)}
     @objc func quit(){NSApp.terminate(nil)}
     func createMenu(){
@@ -169,7 +342,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         statusItem.button?.image=NSImage(systemSymbolName:"pawprint.fill",accessibilityDescription:"Panda")
         statusItem.button?.toolTip="Panda · your little corner of calm"
         let menu=NSMenu()
-        for (title,action,key) in [("Open Panda",#selector(openPanel),""),("Quick add a task",#selector(quickAdd),"n"),("Copy text from screen…",#selector(captureText),""),("Say hello · preview panda",#selector(previewBanner),""),("Toggle quiet mode",#selector(toggleQuiet),""),("Hide Panda",#selector(hidePanel),""),("Open data folder",#selector(showData),""),("Quit Panda",#selector(quit),"q")] {let item=NSMenuItem(title:title,action:action,keyEquivalent:key);item.target=self;menu.addItem(item)}
+        for (title,action,key) in [("Open Panda",#selector(openPanel),""),("Open Panda Window",#selector(openWorkspace),""),("Quick add a task",#selector(quickAdd),"n"),("Copy text from screen…",#selector(captureText),""),("Say hello · preview panda",#selector(previewBanner),""),("Toggle quiet mode",#selector(toggleQuiet),""),("Hide Panda",#selector(hidePanel),""),("Open data folder",#selector(showData),""),("Quit Panda",#selector(quit),"q")] {let item=NSMenuItem(title:title,action:action,keyEquivalent:key);item.target=self;menu.addItem(item)}
         statusItem.menu=menu
     }
     func registerShortcut(){var spec=EventTypeSpec(eventClass:OSType(kEventClassKeyboard),eventKind:UInt32(kEventHotKeyPressed));InstallEventHandler(GetApplicationEventTarget(),{_,_,ptr in guard let ptr else{return noErr};let owner=Unmanaged<AppDelegate>.fromOpaque(ptr).takeUnretainedValue();DispatchQueue.main.async{owner.quickAdd()};return noErr},1,&spec,Unmanaged.passUnretained(self).toOpaque(),&eventHandler)
@@ -179,7 +352,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func userContentController(_ userContentController: WKUserContentController,didReceive message:WKScriptMessage){
         guard message.frameInfo.isMainFrame,let url=message.frameInfo.request.url,url.isFileURL,url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path+"/"),let body=message.body as? [String:Any],let type=body["type"] as? String else{return}
         switch type {
-        case "ready":ready=true;send("config",configuration());campaignBridge.poll(force:true);music.configure((currentState?["settings"] as? [String:Any])?["musicEnabled"] as? Bool ?? false);if calendarReader.isConnected() {calendarReader.connect()} else {calendarReader.refresh()}
+        case "ready":
+            ready = true
+            send("config", configuration())
+            if workspaceOnReady {
+                workspaceOnReady = false
+                openWorkspace()
+            } else if workspace != nil {
+                send("workspace", ["active": true])
+            }
+            campaignBridge.poll(force: true)
+            music.configure((currentState?["settings"] as? [String:Any])?["musicEnabled"] as? Bool ?? false)
+            if calendarReader.isConnected() { calendarReader.connect() } else { calendarReader.refresh() }
         case "campaignProgress":if campaignStateSaved,let progress=body["progress"] as? [String:Any]{campaignBridge.exportProgress(progress)}
         case "addPinFiles":addPinFiles()
         case "preparePinDrag":if NSEvent.pressedMouseButtons & 1 != 0,let id=body["id"] as? String{pendingPinURL=pinFile(id)}
@@ -188,6 +372,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case "clipperBounds":if let x=body["x"] as? Double,let y=body["y"] as? Double,let w=body["width"] as? Double,let h=body["height"] as? Double {clipperBounds=CGRect(x:x,y:y,width:w,height:h)}
         case "menuBounds":if let x=body["x"] as? Double,let y=body["y"] as? Double,let w=body["width"] as? Double,let h=body["height"] as? Double {menuBounds=CGRect(x:x,y:y,width:w,height:h)}
         case "captureText":captureText()
+        case "openWorkspace":openWorkspace()
+        case "dockWorkspace":dockWorkspace(expand: true)
         case "calendarConnect":calendarReader.connect()
         case "calendarRefresh":calendarReader.refresh()
         case "calendarWrite":calendarReader.write(body)
@@ -195,9 +381,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case "openSpotify":if let app=NSRunningApplication.runningApplications(withBundleIdentifier:"com.brave.Browser").first {app.activate(options:[])}
         case "openNotionCalendar":NSWorkspace.shared.open(URL(string:"https://calendar.notion.so")!)
         case "openCalendarApp":NSWorkspace.shared.open(URL(fileURLWithPath:"/System/Applications/Calendar.app"))
-        case "resize":if let w=body["width"] as? Double,let h=body["height"] as? Double,w.isFinite,h.isFinite{expanded=body["open"] as? Bool ?? false;resize(width:w,height:h)}
+        case "resize":if workspace == nil,let w=body["width"] as? Double,let h=body["height"] as? Double,w.isFinite,h.isFinite{expanded=body["open"] as? Bool ?? false;resize(width:w,height:h)}
         case "focus":focusPanel()
-        case "collapse":expanded=false;panel.resignKey()
+        case "collapse":if workspace == nil { expanded=false;panel.resignKey() }
         case "save":if let state=body["state"] as? [String:Any]{save(state)}
         case "sound":playCompanionSound(body["kind"] as? String ?? "timer")
         case "export":if let state=body["state"] as? [String:Any]{exportState(state)}

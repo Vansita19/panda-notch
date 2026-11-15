@@ -56,3 +56,40 @@
 .task-workspace .done button.task-title{color:#767d87;text-decoration:line-through;text-decoration-color:#717c8f}
 
 .app-shell[data-planner-contracting=true] .task-list{flex:none;max-height:var(--planner-task-viewport-height);overflow-y:auto}
+
+.panel-heading .workspace-action{
+ flex:none;
+ min-height:26px;
+ padding:4px 8px;
+ font-size:10px;
+ touch-action:none;
+}
+
+.app-shell.is-workspace{
+ height:100%;
+ background:var(--notch-background);
+}
+.app-shell.is-workspace :is(.notch-surface,.notch-visual,.notch-layout){
+ width:100%;
+ height:100%;
+ min-height:0;
+ max-height:none;
+ border-radius:0;
+}
+.app-shell.is-workspace .notch-visual{clip-path:none}
+.app-shell.is-workspace :is(.notch-corner,.notch-rail){display:none}
+.app-shell.is-workspace .open-content{padding:12px clamp(20px,4vw,48px) 20px}
+.app-shell.is-workspace .view-scroll{
+ flex:1 1 auto;
+ min-height:0;
+ overscroll-behavior:contain;
+}
+.app-shell.is-workspace[data-view=focus] .view-scroll,
+.app-shell.is-workspace[data-planning=true] .view-scroll{
+ display:flex;
+ flex-direction:column;
+}
+.app-shell.is-workspace .focus-dial-view{flex:none;margin-block:auto}
+.app-shell.is-workspace .task-checklist{width:100%}
+.app-shell.is-workspace .task-workspace[data-active=true]{height:auto;flex:1 1 auto}
+.app-shell.is-workspace .toast-position{top:auto;bottom:12px}

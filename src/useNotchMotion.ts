@@ -1,27 +1,40 @@
 import {useLayoutEffect,useRef,type RefObject} from 'react';
 import {createNotchMotion,notchMotion} from './notch-motion.mjs';
 import {host} from './bridge';
-type NotchGeometry={width:number;view:string;navigation:boolean;toast?:boolean;measureHeight?:()=>number;availableHeight?:number};
+type NotchGeometry={width:number;view:string;navigation:boolean;toast?:boolean;measureHeight?:()=>number;availableHeight?:number;suspended?:boolean};
 export function useNotchMotion(surface:RefObject<HTMLDivElement|null>,visual:RefObject<HTMLDivElement|null>,layout:RefObject<HTMLDivElement|null>,open:boolean,closing:boolean,reduced:boolean,onRest:()=>void,geometry?:NotchGeometry,overlay?:RefObject<HTMLDivElement|null>){
  const overlayHeight=useRef(0),overlayAnimation=useRef<Animation|null>(null);
  const recompute=useRef<(()=>void)|null>(null);
  const controller=useRef<any>(null),latest=useRef({open,closing,reduced,onRest,measureHeight:geometry?.measureHeight,availableHeight:geometry?.availableHeight});latest.current={open,closing,reduced,onRest,measureHeight:geometry?.measureHeight,availableHeight:geometry?.availableHeight};
+ const suspended=geometry?.suspended===true;
  useLayoutEffect(()=>{
-  if(!surface.current||!visual.current||!layout.current)return;
-  controller.current=createNotchMotion(surface.current,visual.current,(height:number,isOpen:boolean,width:number)=>{
-   const safe=parseFloat(getComputedStyle(surface.current!).getPropertyValue('--safe-top'))||28;
+  const frame=surface.current,canvas=visual.current,content=layout.current;
+  if(suspended||!frame||!canvas||!content)return;
+  controller.current=createNotchMotion(frame,canvas,(height:number,isOpen:boolean,width:number)=>{
+   const safe=parseFloat(getComputedStyle(frame).getPropertyValue('--safe-top'))||28;
    const frameHeight=height+(height>safe?16:0)+(overlayHeight.current?overlayHeight.current+8:0),available=latest.current.availableHeight;
    host('resize',{width:width+28,height:available!==undefined&&Number.isFinite(available)&&available>0?Math.min(frameHeight,available+15):frameHeight,open:isOpen});
-  },()=>latest.current.onRest(),getComputedStyle,layout.current,()=>performance.now(),({fromHeight,height,duration}:any)=>{
+  },()=>latest.current.onRest(),getComputedStyle,content,()=>performance.now(),({fromHeight,height,duration}:any)=>{
    const node=overlay?.current;if(!node)return;
    overlayAnimation.current?.cancel();node.style.transform=`translateY(${height+8}px)`;
    if(duration){const animation=node.animate([{transform:`translateY(${fromHeight+8}px)`},{transform:`translateY(${height+8}px)`}],{duration,easing:notchMotion.ease});overlayAnimation.current=animation;animation.onfinish=()=>{if(overlayAnimation.current===animation)overlayAnimation.current=null;};}
    else overlayAnimation.current=null;
   });
-  return()=>{controller.current?.dispose();controller.current=null;overlayAnimation.current?.cancel();surface.current?.style.removeProperty('--screen-height');};
- },[]);
+  return()=>{
+   controller.current?.dispose();
+   controller.current=null;
+   overlayAnimation.current?.cancel();
+   overlayAnimation.current=null;
+   frame.style.removeProperty('--screen-height');
+   frame.style.height='';
+   delete frame.dataset.moving;
+   Object.assign(canvas.style,{width:'',height:'',position:'',left:'',clipPath:''});
+   Object.assign(content.style,{width:'',marginInline:''});
+   if(overlay?.current)overlay.current.style.transform='';
+  };
+ },[suspended]);
  useLayoutEffect(()=>{
-  const node=layout.current;if(!node)return;
+  const node=layout.current;if(suspended||!node)return;
   const update=()=>{
    const state=latest.current,safe=parseFloat(getComputedStyle(node).getPropertyValue('--safe-top'))||28;
    const previousOverlay=overlayHeight.current;
@@ -43,11 +56,11 @@ export function useNotchMotion(surface:RefObject<HTMLDivElement|null>,visual:Ref
   // View and navigation changes must measure their final combined layout before paint.
   recompute.current=update;update();const observer=new ResizeObserver(update);observer.observe(node);if(surface.current)observer.observe(surface.current);
   return()=>{observer.disconnect();if(recompute.current===update)recompute.current=null;};
- },[open,closing,reduced,layout,geometry?.width,geometry?.view,geometry?.navigation,geometry?.measureHeight,geometry?.availableHeight,geometry?.toast]);
+ },[open,closing,reduced,suspended,layout,geometry?.width,geometry?.view,geometry?.navigation,geometry?.measureHeight,geometry?.availableHeight,geometry?.toast]);
  useLayoutEffect(()=>{
-  const node=overlay?.current;if(!node)return;
+  const node=overlay?.current;if(suspended||!node)return;
   const update=()=>{if(Math.ceil(node.offsetHeight)!==overlayHeight.current)recompute.current?.();};
   update();const observer=new ResizeObserver(update);observer.observe(node);
   return()=>observer.disconnect();
- },[overlay,geometry?.toast]);
+ },[suspended,overlay,geometry?.toast]);
 }
