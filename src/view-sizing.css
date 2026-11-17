@@ -59,9 +59,12 @@
 
 .panel-heading .workspace-action{
  flex:none;
+ width:26px;
+ min-width:26px;
+ height:26px;
  min-height:26px;
- padding:4px 8px;
- font-size:10px;
+ padding:0;
+ color:var(--panda-text-muted);
  touch-action:none;
 }
 

@@ -196,7 +196,7 @@ export default function App(){
   }catch(error:any){notify(error.message||'Could not remove the calendar event. Your task is still here.');return {ok:false};}
   finally{deletingTasks.current.delete(t.id);}
  };
- const saveIdea=(idea:Pick<ProjectIdea,'id'|'title'|'notes'|'links'>)=>{
+ const saveIdea=(idea:Pick<ProjectIdea,'id'|'title'|'notes'|'links'|'icon'|'color'>)=>{
   const current=stateRef.current.projectIdeas??[];
   if(saveProjectIdea(current,idea,Date.now())===current)return;
   const existing=current.some((item:ProjectIdea)=>item.id===idea.id);

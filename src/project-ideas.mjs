@@ -5,6 +5,35 @@ export const projectIdeaLimits = {count:300, title:200, notes:20000, links:12, l
 const collectionBytes = 750_000;
 const encoder = new TextEncoder();
 const fields = ['id', 'title', 'notes', 'links', 'created', 'updated'];
+const appearanceFields = ['icon', 'color'];
+export const projectIdeaColors = ['lavender', 'mint', 'peach', 'blue', 'rose', 'amber'];
+export const projectIdeaIcons = ['✨', '🌱', '🎨', '🧩', '🚀', '🪴', '🎧', '🧭', '📚', '💡', '🌊', '🍊', '🪐', '🎮', '🛠️', '💻'];
+export const validProjectIdeaIcon = value =>
+ typeof value === 'string' && value === value.trim() && value.length > 0 &&
+ value.length <= 32 && !/[\x00-\x1f\x7f]/.test(value);
+
+const appearanceRules = [
+ {words:/garden|plant|grow|nature|eco|sustain|habit|wellness/i, icon:'🌱', color:'mint'},
+ {words:/music|audio|sound|playlist|podcast/i, icon:'🎧', color:'lavender'},
+ {words:/design|art|draw|paint|creativ|portfolio|studio/i, icon:'🎨', color:'peach'},
+ {words:/travel|trip|map|explore|adventure|wander/i, icon:'🧭', color:'blue'},
+ {words:/game|play|fun|arcade/i, icon:'🎮', color:'rose'},
+ {words:/read|book|learn|study|course/i, icon:'📚', color:'amber'},
+ {words:/space|star|cosm|planet/i, icon:'🪐', color:'lavender'},
+ {words:/food|cook|recipe|meal/i, icon:'🍊', color:'peach'},
+ {words:/web|app|code|tool|build|software/i, icon:'🧩', color:'blue'},
+];
+
+export function projectIdeaAppearance(idea) {
+ const text = idea.title ?? '';
+ const match = appearanceRules.find(rule => rule.words.test(text));
+ let hash = 0;
+ for (const character of idea.id ?? text) hash = (hash * 31 + character.codePointAt(0)) >>> 0;
+ return {
+  icon:validProjectIdeaIcon(idea.icon) ? idea.icon : match?.icon ?? projectIdeaIcons[hash % projectIdeaIcons.length],
+  color:projectIdeaColors.includes(idea.color) ? idea.color : match?.color ?? projectIdeaColors[hash % projectIdeaColors.length],
+ };
+}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function projectIdeaLink(value) {
@@ -22,7 +51,10 @@ export function projectIdeaLink(value) {
 function validProjectIdea(idea) {
  return idea !== null && typeof idea === 'object' &&
   Object.getPrototypeOf(idea) === Object.prototype &&
-  Object.keys(idea).length === fields.length && fields.every(field => Object.hasOwn(idea, field)) &&
+  Object.keys(idea).every(field => fields.includes(field) || appearanceFields.includes(field)) &&
+  fields.every(field => Object.hasOwn(idea, field)) &&
+  (idea.icon === undefined || validProjectIdeaIcon(idea.icon)) &&
+  (idea.color === undefined || projectIdeaColors.includes(idea.color)) &&
   typeof idea.id === 'string' && uuid.test(idea.id) &&
   typeof idea.title === 'string' && !!idea.title && idea.title === idea.title.trim() &&
   idea.title.length <= projectIdeaLimits.title &&
@@ -54,6 +86,10 @@ export function saveProjectIdea(ideas, draft, now) {
  if (links.some(link => !link)) throw Error('Use web links for your references.');
  const previous = ideas.find(idea => idea.id === draft.id);
  if (!previous && ideas.length >= projectIdeaLimits.count) throw Error('You’ve reached the limit of 300 ideas.');
+ const icon = draft.icon === undefined ? previous?.icon : draft.icon;
+ const color = draft.color === undefined ? previous?.color : draft.color;
+ if (icon !== undefined && !validProjectIdeaIcon(icon)) throw Error('Choose an emoji or a short icon of up to 32 characters.');
+ if (color !== undefined && !projectIdeaColors.includes(color)) throw Error('Choose a color for this idea.');
  const idea = {
   id:draft.id,
   title:draft.title.trim(),
@@ -61,8 +97,10 @@ export function saveProjectIdea(ideas, draft, now) {
   links:[...new Set(links)],
   created:previous?.created ?? now,
   updated:now,
+  ...(icon === undefined ? {} : {icon}),
+  ...(color === undefined ? {} : {color}),
  };
- if (previous && idea.title === previous.title && idea.notes === previous.notes &&
+ if (previous && idea.icon === previous.icon && idea.color === previous.color && idea.title === previous.title && idea.notes === previous.notes &&
      idea.links.length === previous.links.length && idea.links.every((link,index) => link === previous.links[index])) {
   return ideas;
  }

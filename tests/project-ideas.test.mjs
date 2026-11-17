@@ -56,3 +56,35 @@ test('idea references accept web URLs but reject local files, commands and crede
  }}, now);
  assert.deepEqual(saved.projectIdeas, []);
 });
+
+test('custom idea icons and colors survive edits, native-style backups, deletion and Undo', () => {
+ const draft = {id,title:'Window garden',notes:'A little planter',links:[],icon:'🪴',color:'mint'};
+ let state = reduce(initialState(now), {type:'saveProjectIdea',idea:draft}, now);
+ state = reduce(state, {type:'saveProjectIdea',idea:{id,title:'Windowsill garden',notes:'Three seedlings',links:[]}}, now+1);
+ assert.equal(state.projectIdeas[0].icon, '🪴');
+ assert.equal(state.projectIdeas[0].color, 'mint');
+ const updated = reduce(state, {type:'saveProjectIdea',idea:{...draft,icon:'🌷',color:'rose'}}, now+2);
+ const sorted = JSON.stringify(updated, (_key,value) =>
+  value && typeof value==='object' && !Array.isArray(value)
+   ? Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)))
+   : value);
+ const restored = restore(JSON.parse(sorted), now+2);
+ assert.deepEqual(restored.projectIdeas,updated.projectIdeas);
+ const removed = reduce(restored,{type:'deleteProjectIdea',id},now+2);
+ const undone = reduce(removed,{type:'restoreProjectIdea',idea:restored.projectIdeas[0],index:0},now+2);
+ assert.deepEqual(undone.projectIdeas,restored.projectIdeas);
+});
+
+test('legacy ideas receive a stable appearance and reject malformed saved appearance', async () => {
+ const {projectIdeaAppearance,saveProjectIdea,validProjectIdeas} = await import('../src/project-ideas.mjs');
+ const original = {id,title:'Window garden',notes:'',links:[],created:now,updated:now};
+ const before = structuredClone(original);
+ assert.deepEqual(projectIdeaAppearance(original),{icon:'🌱',color:'mint'});
+ assert.deepEqual(original,before);
+ assert.equal(validProjectIdeas([original]),true);
+ for(const icon of ['', 'x'.repeat(33), 'a\nb', 42]) {
+  assert.throws(()=>saveProjectIdea([original],{...original,icon},now+1));
+ }
+ assert.throws(()=>saveProjectIdea([original],{...original,color:'unknown'},now+1));
+ assert.equal(validProjectIdeas([{...original,icon:'💡',color:'blue'}]),true);
+});

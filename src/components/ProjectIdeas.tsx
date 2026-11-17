@@ -1,10 +1,12 @@
 import {useId, useLayoutEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
-import {ArrowLeft, ArrowUpRight, Lightbulb, Link2, Pencil, Plus, Trash2, X} from 'lucide-react';
+import {ArrowLeft, ArrowUpRight, Check, Link2, Pencil, Plus, Trash2, X} from 'lucide-react';
 import {Button} from '../arc/button/button';
 import {host, native} from '../bridge';
-import {projectIdeaLimits, projectIdeaLink} from '../project-ideas.mjs';
+import {projectIdeaLimits, projectIdeaLink, projectIdeaAppearance, projectIdeaColors, projectIdeaIcons, validProjectIdeaIcon} from '../project-ideas.mjs';
 import './project-ideas.css';
+
+export type IdeaColor = 'lavender' | 'mint' | 'peach' | 'blue' | 'rose' | 'amber';
 
 export type ProjectIdea = {
   id: string;
@@ -13,10 +15,12 @@ export type ProjectIdea = {
   links: string[];
   created: number;
   updated: number;
+  icon?: string;
+  color?: IdeaColor;
 };
 
-type IdeaDraft = Pick<ProjectIdea, 'id' | 'title' | 'notes' | 'links'>;
-type IdeaField = 'title' | number;
+type IdeaDraft = Pick<ProjectIdea, 'id' | 'title' | 'notes' | 'links' | 'icon' | 'color'>;
+type IdeaField = 'title' | 'icon' | number;
 
 export type ProjectIdeasSession = {
   selectedId: string | null;
@@ -43,7 +47,9 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
   const nextFocus = useRef<IdeaField | 'detail' | 'new' | null>(null);
   const previousSelection = useRef<string | null>(session?.previousSelection ?? null);
   const selected = ideas.find(idea => idea.id === selectedId);
-  const preview = selected ?? (wide ? ideas[0] : undefined);
+  const preview = selected;
+  const draftAppearance = draft ? projectIdeaAppearance(draft) : null;
+  const previewAppearance = preview ? projectIdeaAppearance(preview) : null;
   const showingIdea = !!(selected || draft);
 
   useLayoutEffect(() => {
@@ -65,9 +71,10 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
     }
   }, [draft, selectedId, error]);
 
-  function startEditing(idea?: ProjectIdea) {
+  function startEditing(idea?: ProjectIdea, focus: 'title' | 'icon' = 'title') {
     previousSelection.current = selected?.id ?? null;
-    nextFocus.current = 'title';
+    nextFocus.current = focus;
+    setError(null);
     setDraft(idea ? {...idea, links: idea.links.length ? [...idea.links] : ['']} : {
       id: crypto.randomUUID(),
       title: '',
@@ -93,6 +100,11 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
       setError({field: 'title', message: 'Enter a project name.'});
       return;
     }
+    if (draft.icon !== undefined && !validProjectIdeaIcon(draft.icon)) {
+      nextFocus.current = 'icon';
+      setError({field: 'icon', message: 'Choose an emoji or a short icon.'});
+      return;
+    }
     const links = new Set<string>();
     for (const [index, input] of draft.links.entries()) {
       if (!input.trim()) continue;
@@ -105,7 +117,7 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
       links.add(link);
     }
     try {
-      onSave({id: draft.id, title, notes: draft.notes, links: [...links]});
+      onSave({id: draft.id, title, notes: draft.notes, links: [...links], icon: draftAppearance!.icon, color: draftAppearance!.color});
     } catch (failure) {
       setError({
         field: 'form',
@@ -128,7 +140,7 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
     setSelectedId(id);
   }
 
-  function changeField(field: 'title' | 'notes', value: string) {
+  function changeField(field: 'title' | 'notes' | 'icon', value: string) {
     setDraft(current => current && {...current, [field]: value});
     if (error?.field === field || error?.field === 'form') setError(null);
   }
@@ -149,7 +161,7 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
   const errorId = `${inputPrefix}-error`;
 
   return (
-    <section className="project-ideas" aria-label="Project ideas" data-wide={wide} data-showing-idea={showingIdea}>
+    <section className="project-ideas" aria-label="Project ideas" data-wide={wide} data-showing-idea={showingIdea} data-editing={!!draft}>
       <header className="project-ideas-heading">
         {showingIdea && !draft
           ? <Button type="button" variant="ghost" size="sm" className="project-ideas-back" onClick={() => {
@@ -168,13 +180,20 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
       <div className="project-ideas-layout" data-has-list={ideas.length > 0}>
         <div className="project-ideas-library" inert={draft ? true : undefined}>
           {ideas.length ? <ul aria-label="Saved ideas">
-            {ideas.map(idea => <li key={idea.id}>
-              <button type="button" className="project-idea-row" aria-current={preview?.id === idea.id ? 'true' : undefined}
-                onClick={() => openIdea(idea.id)}>
-                <Lightbulb size={15} aria-hidden="true" />
-                <span>{idea.title}</span>
-              </button>
-            </li>)}
+            {ideas.map(idea => {
+              const appearance = projectIdeaAppearance(idea);
+              return <li key={idea.id}>
+                <button type="button" className="project-idea-card" data-color={appearance.color}
+                  aria-label={idea.title} aria-current={preview?.id === idea.id ? 'true' : undefined}
+                  onClick={() => openIdea(idea.id)}>
+                  <span className="project-idea-emblem" aria-hidden="true"><span>{appearance.icon}</span></span>
+                  <span className="project-idea-card-copy">
+                    <strong>{idea.title}</strong>
+                    {idea.notes.trim() && <span className="project-idea-card-preview">{idea.notes}</span>}
+                  </span>
+                </button>
+              </li>;
+            })}
           </ul> : <p className="project-ideas-empty">Save a project you want to build.</p>}
         </div>
 
@@ -186,6 +205,29 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
                 cancel();
               }
             }}>
+            <fieldset className="project-idea-appearance" data-color={draftAppearance!.color}>
+              <legend>Project icon</legend>
+              <div className="project-idea-icon-edit">
+                <span className="project-idea-emblem" aria-hidden="true"><span>{draftAppearance!.icon}</span></span>
+                <label className="project-idea-field">
+                  Icon or emoji
+                  <input name="icon" value={draft.icon ?? draftAppearance!.icon} maxLength={32}
+                    aria-invalid={error?.field === 'icon' || undefined} aria-describedby={error?.field === 'icon' ? errorId : undefined}
+                    onChange={event => changeField('icon', event.target.value)} />
+                </label>
+              </div>
+              <div className="project-idea-emoji-options" role="group" aria-label="Choose a project icon">
+                {projectIdeaIcons.map((icon: string) => <button key={icon} type="button" aria-label={`Use ${icon} icon`}
+                  aria-pressed={draftAppearance!.icon === icon} onClick={() => changeField('icon', icon)}>{icon}</button>)}
+              </div>
+              <div className="project-idea-color-options" role="group" aria-label="Card color">
+                {projectIdeaColors.map((color: IdeaColor) => <button key={color} type="button" data-color={color}
+                  aria-label={`Use ${color} color`} title={color.charAt(0).toUpperCase() + color.slice(1)}
+                  aria-pressed={draftAppearance!.color === color} onClick={() => setDraft(current => current && {...current, color})}>
+                  {draftAppearance!.color === color && <Check size={12} aria-hidden="true" />}
+                </button>)}
+              </div>
+            </fieldset>
             <label className="project-idea-field">
               Project name
               <input name="title" value={draft.title} maxLength={projectIdeaLimits.title} aria-required="true"
@@ -225,10 +267,14 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
             </div>
           </form>
         ) : preview && (
-          <article className="project-idea-detail">
+          <article className="project-idea-detail" data-color={previewAppearance!.color}>
             <header className="project-idea-detail-heading">
-              <h2 ref={detailTitle} tabIndex={-1}>{preview.title}</h2>
-              <div>
+              <div className="project-idea-identity">
+                <button type="button" className="project-idea-emblem" aria-label="Change project icon" title="Change icon"
+                  onClick={() => startEditing(preview, 'icon')}><span aria-hidden="true">{previewAppearance!.icon}</span></button>
+                <h2 ref={detailTitle} tabIndex={-1}>{preview.title}</h2>
+              </div>
+              <div className="project-idea-detail-actions">
                 <Button type="button" variant="ghost" size="sm" className="project-idea-icon-button" aria-label="Edit idea"
                   title="Edit idea" onClick={() => startEditing(preview)}><Pencil size={14} aria-hidden="true" /></Button>
                 <Button type="button" variant="ghost" size="sm" className="project-idea-icon-button" aria-label="Delete idea"
