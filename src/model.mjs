@@ -2,21 +2,16 @@ import {reconcileTaskLinks,validSlot,plannerColors} from './planner.mjs';
 import {localDayKey,dayFromKey,liveTaskProgress,validTaskHistory,updateTaskHistory} from './month-progress.mjs';
 import {initialTrackers,validTrackers,trackerSlots,trackerLimit,trackerTitle,trackerMask,trackerToday,validTrackerSlots} from './tracker.mjs';
 import {reconcileCampaign,campaignDate,campaignTaskVisible,campaignEntry,campaignAcknowledgeHome,campaignSetEvidence,validCampaignState,validCampaignTaskMetadata} from './campaign.mjs';
-export function normalizePinURL(value){
- const raw=String(value).trim();if(!raw||/[\x00-\x1f]/.test(raw))throw Error('Enter a link or an absolute file path.');
- const path=raw.startsWith('/')&&!raw.startsWith('//');
- if(!path&&!raw.startsWith('file:')&&/\s/.test(raw))throw Error('Enter a valid link.');
- const u=new URL(path?'file://'+raw:/^[a-z][a-z0-9+.-]*:/i.test(raw)?raw:'https://'+raw);
- if(u.username||u.password)throw Error('Links with embedded passwords are not supported.');
- if(u.protocol==='file:'){if(u.hostname&&u.hostname!=='localhost')throw Error('Use a local file on this Mac.');if(!u.pathname||u.pathname==='/')throw Error('Include the file path.');}
- else if(!['https:','http:'].includes(u.protocol)||!u.hostname)throw Error('Use an http, https, or file link.');
- return u.href;
-}
+import {normalizePinURL} from './links.mjs';
+import {restoreProjectIdea,saveProjectIdea,validProjectIdeas} from './project-ideas.mjs';
+
+export {normalizePinURL};
+
 export function pinLinkLabel(value){const u=new URL(value);if(u.protocol!=='file:')return u.hostname;try{return decodeURIComponent(u.pathname.split('/').filter(Boolean).pop()||'Local file');}catch{return 'Local file';}}
 
 export function validPin(p){try{return !!p&&/^[0-9a-f-]{36}$/i.test(p.id)&&typeof p.title==='string'&&!!p.title.trim()&&p.title.length<=120&&Number.isFinite(p.created)&&(p.kind==='link'?typeof p.url==='string'&&p.url.length<=4000&&normalizePinURL(p.url)===p.url:p.kind==='file'&&typeof p.fileName==='string'&&!!p.fileName&&!/[\/\\]/.test(p.fileName)&&!['.','..'].includes(p.fileName)&&Number.isFinite(p.size)&&p.size>=0);}catch{return false;}}
 export const taskPriorityValues=['low','medium','high'];
-const viewValues=['today','tasks','tracker','focus','pins','dump','reminders'];
+const viewValues=['today','tasks','tracker','focus','pins','ideas','dump','reminders'];
 export function resumeView(state,target){return viewValues.includes(target)?target:viewValues.includes(state?.lastView)?state.lastView:'today';}
 export function openingView(state,now=Date.now(),target){return target===undefined&&campaignEntry(state,now).showHome?'today':resumeView(state,target);}
 const minute=60000;
@@ -29,7 +24,7 @@ export const messages=[{title:'Drink water, buddy.',sub:'A little sip. A little 
 export const durations=(s,mode)=>({focus:s.settings.focusMinutes,short:s.settings.shortMinutes,long:s.settings.longMinutes}[mode]*60);
 const timerNotice=(mode,now)=>({kind:'timer',id:uid(),at:now,title:mode==='focus'?'Ready for a fresh start?':'You did it. Take a break.',sub:mode==='focus'?'Your next focus session is ready.':'Your break is ready when you are.'});
 export function initialState(now=Date.now()){
- return updateTaskHistory(reconcileCampaign({version:1,lastView:'today',trackers:initialTrackers(now),calendar:{mode:'sample',selectedIds:[]},pins:[],notes:[],brainDump:'',brainDumpTitle:'',activeNoteId:null,reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false},now),now);
+ return updateTaskHistory(reconcileCampaign({version:1,lastView:'today',trackers:initialTrackers(now),calendar:{mode:'sample',selectedIds:[]},pins:[],projectIdeas:[],notes:[],brainDump:'',brainDumpTitle:'',activeNoteId:null,reminders:[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}],tasks:[{id:uid(),title:'Make something I’m proud of',section:'today',done:false,pinned:true,created:now,due:null,priority:'medium'},{id:uid(),title:'Take a little walk outside',section:'today',done:false,pinned:false,created:now,due:null,priority:'medium'}],draft:'',events:sampleEvents(now),settings:{mascotName:'Bubu',mascotSounds:true,reminderDisplaySeconds:5,focusMinutes:25,shortMinutes:5,longMinutes:15,nudgeMinutes:60,startHour:9,endHour:22,quiet:false,pausedUntil:0,reducedMotion:false,sound:true,categories:{water:true,stretch:true,eyes:true,kind:true},leadMinutes:5},timer:{mode:'focus',seconds:1500,running:false,startedAt:null,sessions:0,taskId:null},alert:null,seen:{},snoozed:{},lastNudge:now,nudgeIndex:0,welcomed:false},now),now);
 }
 export function sampleEvents(now){return [{id:uid(),title:'A little planning time',start:now+20*minute,end:now+50*minute,color:'blue'},{id:uid(),title:'Make room for creative work',start:now+90*minute,end:now+150*minute,color:'peach'}];}
 export function remaining(t,now=Date.now()){return Math.max(0,Math.ceil(t.seconds-(t.running?Math.max(0,now-t.startedAt)/1000:0)));}
@@ -47,6 +42,7 @@ export function validateState(x){
  if((x.taskHistory!==undefined||x.taskHistoryDay!==undefined)&&!validTaskHistory(x.taskHistory,x.taskHistoryDay))fail();
  if(x.lastGreetingDay!=null&&(typeof x.lastGreetingDay!=='string'||!/^\d{4}-\d{1,2}-\d{1,2}$/.test(x.lastGreetingDay)))fail();
  if(x.pins!==undefined&&(!Array.isArray(x.pins)||x.pins.length>200||x.pins.some(p=>!validPin(p))||new Set(x.pins.map(p=>p.id)).size!==x.pins.length))fail();
+ if(x.projectIdeas!==undefined&&!validProjectIdeas(x.projectIdeas))fail();
  if(x.brainDump!==undefined&&(typeof x.brainDump!=='string'||x.brainDump.length>100000))fail();
  if(x.brainDumpTitle!==undefined&&(typeof x.brainDumpTitle!=='string'||x.brainDumpTitle.length>200))fail();
  if(x.calendar!==undefined&&(!record(x.calendar)||!['sample','connected','off'].includes(x.calendar.mode)||!Array.isArray(x.calendar.selectedIds)||x.calendar.selectedIds.length>100||x.calendar.selectedIds.some(id=>typeof id!=='string'||id.length>500)))fail();
@@ -76,7 +72,7 @@ export function validateState(x){
  for(const value of Object.values(x.snoozed))if(!Number.isFinite(value))fail();
  return structuredClone(x);
 }
-export function restore(x,now=Date.now()){const s=validateState(x);s.lastView??='today';s.trackers??=initialTrackers(now);s.pins??=[];s.brainDump??='';s.brainDumpTitle??='';s.activeNoteId??=null;s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return updateTaskHistory(reconcileCampaign(s,now),now);}
+export function restore(x,now=Date.now()){const s=validateState(x);s.lastView??='today';s.trackers??=initialTrackers(now);s.pins??=[];s.projectIdeas??=[];s.brainDump??='';s.brainDumpTitle??='';s.activeNoteId??=null;s.notes??=[];s.settings.mascotName??='Bubu';s.settings.mascotSounds??=true;s.settings.reminderDisplaySeconds??=5;for(const task of s.tasks)task.priority??='medium';s.calendar??={mode:'sample',selectedIds:[]};s.reminders??=[{id:'water',title:'Drink water, buddy.',intervalMinutes:60,enabled:true,sound:true,lastFired:now}];for(const r of s.reminders)r.sound??=true;s.timer.running=false;s.timer.startedAt=null;if(s.alert?.key)delete s.seen[s.alert.key];s.alert=null;return updateTaskHistory(reconcileCampaign(s,now),now);}
 export function reduce(state,a,now=Date.now()){
  const base=updateTaskHistory(reconcileCampaign(state,now),now);
  if(a.type==='checkpoint'&&!state.timer.running)return base;
@@ -120,6 +116,27 @@ export function reduce(state,a,now=Date.now()){
  case 'add':{const title=a.title.trim().slice(0,500);if(!title)return base;s.tasks.push({id:uid(),title,section:a.section==='later'?'later':'today',done:false,pinned:false,created:now,due:null,priority:'medium'});s.draft='';break;}
  case 'addPins':for(const p of a.pins??[])if(validPin(p)&&s.pins.length<200&&!s.pins.some(v=>v.id===p.id))s.pins.push(p);break;
  case 'deletePin':s.pins=s.pins.filter(p=>p.id!==a.id);break;
+ case 'saveProjectIdea':{
+  try {
+   const ideas=saveProjectIdea(base.projectIdeas??[],a.idea,now);
+   if(ideas===base.projectIdeas)return base;
+   s.projectIdeas=ideas;
+  } catch {
+   return base;
+  }
+  break;
+ }
+ case 'deleteProjectIdea':{
+  if(!base.projectIdeas?.some(idea=>idea.id===a.id))return base;
+  s.projectIdeas=base.projectIdeas.filter(idea=>idea.id!==a.id);
+  break;
+ }
+ case 'restoreProjectIdea':{
+  const ideas=restoreProjectIdea(base.projectIdeas??[],a.idea,a.index);
+  if(ideas===base.projectIdeas)return base;
+  s.projectIdeas=ideas;
+  break;
+ }
  case 'saveNote':{const explicit=a.id!==undefined,body=explicit?s.brainDump:s.brainDump.trim(),title=s.brainDumpTitle??'';if((!body.trim()&&!title.trim())||s.notes.length>=5000||(explicit&&(typeof a.id!=='string'||!a.id.trim()||a.id.length>500||s.notes.some(n=>n.id===a.id))))return base;const id=explicit?a.id:uid();s.notes.unshift({id,...(explicit||title?{title}:{}),body,created:now});s.brainDump='';s.brainDumpTitle='';s.activeNoteId=id;break;}
  case 'editNote':{const body=String(a.body??'').trim().slice(0,100000),note=s.notes.find(n=>n.id===a.id);if(!body||!note||note.body===body)return base;note.body=body;note.updated=now;break;}
  case 'updateNote':{const note=s.notes.find(n=>n.id===a.id);if(!note||(a.title!==undefined&&typeof a.title!=='string')||(a.body!==undefined&&typeof a.body!=='string'))return base;const title=a.title===undefined?note.title:a.title.slice(0,200),body=a.body===undefined?note.body:a.body.slice(0,100000);if(title===note.title&&body===note.body)return base;note.title=title??'';note.body=body;note.updated=now;break;}

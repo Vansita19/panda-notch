@@ -25,6 +25,8 @@ import {unlinkCalendarTaskTime} from './task-calendar-unlink.mjs';
 import {createTaskFromCalendar} from './calendar-task-create.mjs';
 import {Pins} from './components/Pins';
 import {IdeasCanvas} from './components/IdeasCanvas';
+import {ProjectIdeas,type ProjectIdea,type ProjectIdeasSession} from './components/ProjectIdeas';
+import {saveProjectIdea} from './project-ideas.mjs';
 import {FocusTimer} from './components/FocusTimer';
 import {CalendarNotice} from './components/CalendarNotice';
 import {Panda,PandaBanner} from './components/Panda';
@@ -44,6 +46,7 @@ export default function App(){
  const [s,setS]=useState(load),[now,setNow]=useState(Date.now()),[open,setOpen]=useState(!native),[closing,setClosing]=useState(false),[addingTodo,setAddingTodo]=useState(false),[tab,setTab]=useState(()=>openingView(s,Date.now())),[section,setSection]=useState('today'),[edit,setEdit]=useState<any>(null),[toast,setToast]=useState<any>(null),[celebrate,setCelebrate]=useState(false),[config,setConfig]=useState(window.__PANDA_CONFIG__||{availableHeight:window.innerHeight-20}),[storageError,setStorageError]=useState(window.__PANDA_CONFIG__?.storageWarning||''),[drag,setDrag]=useState<string|null>(null),[peek,setPeek]=useState(false),[petLine,setPetLine]=useState(''),[calendarInfo,setCalendarInfo]=useState<any>({status:'notConnected',calendars:[]});
  const [planning,setPlanning]=useState(false),[planningLayout,setPlanningLayout]=useState(false),[planningContracting,setPlanningContracting]=useState(false),[plannerGeometry,setPlannerGeometry]=useState<{width:number;workspaceHeight:number;taskViewportHeight:number}|null>(null),[music,setMusic]=useState<any>(null),[showNavigation,setShowNavigation]=useState(()=>openingView(s,Date.now())!=='today');
  const [workspaceOpen,setWorkspaceOpen]=useState(false),workspaceRef=useRef(false);
+ const projectIdeasSession=useRef<ProjectIdeasSession>({selectedId:null,draft:null,previousSelection:null});
  useEffect(()=>host('musicEnabled',{enabled:s.settings.musicEnabled===true}),[s.settings.musicEnabled]);
  const [campaignBriefError,setCampaignBriefError]=useState(''),[campaignProgressError,setCampaignProgressError]=useState('');
  const [manualHeightView,setManualHeightView]=useState<string|null>(null),[renamingTask,setRenamingTask]=useState<string|null>(null);
@@ -193,6 +196,21 @@ export default function App(){
   }catch(error:any){notify(error.message||'Could not remove the calendar event. Your task is still here.');return {ok:false};}
   finally{deletingTasks.current.delete(t.id);}
  };
+ const saveIdea=(idea:Pick<ProjectIdea,'id'|'title'|'notes'|'links'>)=>{
+  const current=stateRef.current.projectIdeas??[];
+  if(saveProjectIdea(current,idea,Date.now())===current)return;
+  const existing=current.some((item:ProjectIdea)=>item.id===idea.id);
+  dispatch({type:'saveProjectIdea',idea});
+  notify(existing?'Idea updated':'Idea saved');
+ };
+ const deleteIdea=(id:string)=>{
+  const ideas:ProjectIdea[]=stateRef.current.projectIdeas??[];
+  const index=ideas.findIndex(idea=>idea.id===id);
+  if(index<0)return;
+  const idea=ideas[index];
+  dispatch({type:'deleteProjectIdea',id});
+  notify('Idea removed',()=>dispatch({type:'restoreProjectIdea',idea,index}));
+ };
  const saveCampaignEvidence=(id:string,evidence:any[])=>{try{campaignSetEvidence(stateRef.current,id,evidence,Date.now());dispatch({type:'campaignEvidence',id,evidence});return true;}catch(error:any){notify(error.message);return false;}};
  const removeCalendarTime=async(t:any)=>{
   if(deletingTasks.current.has(t.id))return {ok:false};
@@ -245,7 +263,7 @@ export default function App(){
  <form className="task-row add-todo-row" onSubmit={add}><span className="empty-checkbox" aria-hidden="true"/>{addingTodo||s.draft?<input ref={input} autoFocus aria-label="Add a to-do" placeholder="Add a to-do" value={s.draft} maxLength={500} onChange={e=>dispatch({type:'draft',value:e.target.value})} onBlur={()=>{if(!s.draft.trim())setAddingTodo(false);}} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setAddingTodo(false);dispatch({type:'draft',value:''});}}}/>:<button type="button" className="add-todo-placeholder" onClick={()=>setAddingTodo(true)}>Add a to-do</button>}</form></div>}/>)
  :tab==='tracker'?<Tracker trackers={s.trackers} now={now} dispatch={dispatch} notify={notify}/>
  :tab==='focus'?<FocusTimer s={s} seconds={seconds} dispatch={dispatch} onStart={close}/>
- :tab==='pins'?<Pins pins={s.pins} dispatch={dispatch} notify={notify}/>:tab==='reminders'?<Reminders s={s} dispatch={dispatch}/>:tab==='dump'?<IdeasCanvas s={s} dispatch={dispatch} notify={notify}/>:<SettingsView s={s} calendarInfo={calendarInfo} config={config} dispatch={dispatch} exportData={exportData} importData={importData} preview={()=>dispatch({type:'nudge'})}/>}
+ :tab==='pins'?<Pins pins={s.pins} dispatch={dispatch} notify={notify}/>:tab==='reminders'?<Reminders s={s} dispatch={dispatch}/>:tab==='ideas'?<ProjectIdeas session={projectIdeasSession.current} ideas={s.projectIdeas??[]} onSave={saveIdea} onDelete={deleteIdea} wide={workspaceOpen}/>:tab==='dump'?<IdeasCanvas s={s} dispatch={dispatch} notify={notify}/>:<SettingsView s={s} calendarInfo={calendarInfo} config={config} dispatch={dispatch} exportData={exportData} importData={importData} preview={()=>dispatch({type:'nudge'})}/>}
  </div>
  </div>
  </div>}

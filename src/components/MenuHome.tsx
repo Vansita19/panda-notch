@@ -1,5 +1,5 @@
 import {useLayoutEffect,useRef,type KeyboardEvent} from 'react';
-import {ListChecks,MousePointer2} from 'lucide-react';
+import {ListChecks,MousePointer2,NotebookPen} from 'lucide-react';
 import {featureViews} from '../navigation';
 import {deriveMenuUpcoming} from '../menu-upcoming.mjs';
 import {createMenuCardMotion} from './menu-card-motion';
@@ -39,10 +39,15 @@ function CardArtwork({id,label}:{id:string;label:string}){
    <span className="menu-layer menu-links-wave" style={{maskImage:'url("menu/imgMaskGroup.svg")',WebkitMaskImage:'url("menu/imgMaskGroup.svg")'}}>{Array.from({length:25},(_,i)=><span className="menu-wave-bar" key={i} style={{left:`${i*6.51078}px`,backgroundImage:'url("menu/imgMaskGroup.svg")'}}/>)}</span>
    <span className="menu-card-label">{label}</span>
   </>}
-  {id==='dump'&&<>
+  {id==='ideas'&&<>
    <span className="menu-layer menu-ideas-aura"/>
    <span className="menu-layer menu-ideas-heart"/>
    <span className="menu-icon-clip">{asset('imgGroup2','menu-layer menu-ideas-icon')}</span>
+   <span className="menu-card-label">{label}</span>
+  </>}
+  {id==='dump'&&<>
+   <span className="menu-layer menu-notes-sheet"/>
+   <NotebookPen className="menu-layer menu-card-icon" size={34}/>
    <span className="menu-card-label">{label}</span>
   </>}
   {id==='reminders'&&<>

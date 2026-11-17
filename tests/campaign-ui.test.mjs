@@ -18,7 +18,7 @@ const at=date=>Date.parse(`${date}T08:00:00+05:30`),day1=at('2026-11-01'),day2=a
 test('Home starts with Menu cards without a daily banner',()=>{
  const now=day1,html=ui.renderHome({now});
  assert.match(html,/aria-label="Panda tools"/);assert.match(html,/class="menu-home-scroll"/);
- for(const label of ['To-Do','Tracker','Focus','All links','Ideas','Reminders'])assert.ok(html.includes(`aria-label="${label}"`));
+ for(const label of ['To-Do','Tracker','Focus','All links','Ideas','Notes','Reminders'])assert.ok(html.includes(`aria-label="${label}"`));
  assert.doesNotMatch(html,/Today’s campaign note|campaign-today|One block at a time|Open today’s tasks|Daily brief|Preview routine|Save review/);
 });
 test('optional references and self-review remain available from the actual carried task details',()=>{

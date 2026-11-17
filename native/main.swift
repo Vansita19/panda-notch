@@ -378,6 +378,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case "calendarRefresh":calendarReader.refresh()
         case "calendarWrite":calendarReader.write(body)
         case "musicEnabled":music.configure(body["enabled"] as? Bool ?? false)
+        case "openIdeaLink":
+            if let text = body["url"] as? String, text.utf8.count <= 2_000,
+               let parts = URLComponents(string: text),
+               let scheme = parts.scheme?.lowercased(), ["https", "http"].contains(scheme),
+               let name = parts.host, !name.isEmpty, parts.user == nil, parts.password == nil,
+               let url = parts.url {
+                NSWorkspace.shared.open(url)
+            }
         case "openSpotify":if let app=NSRunningApplication.runningApplications(withBundleIdentifier:"com.brave.Browser").first {app.activate(options:[])}
         case "openNotionCalendar":NSWorkspace.shared.open(URL(string:"https://calendar.notion.so")!)
         case "openCalendarApp":NSWorkspace.shared.open(URL(fileURLWithPath:"/System/Applications/Calendar.app"))

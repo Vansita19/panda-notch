@@ -17,12 +17,12 @@
 .menu-tracker-boxes i{width:17px;height:17px;border:1px solid #ffffff55;border-radius:4px}.menu-tracker-boxes .is-checked{background:#c5ddcb80;border-color:#dceae1b3}
 .menu-card-art-focus{background:linear-gradient(180deg,#2c2f57 0%,#6a61e0 100%);--menu-stroke-tint:rgba(163,141,255,.2)}
 .menu-card-art-pins{background:#151712;--menu-stroke-tint:rgba(78,135,46,.2)}
-.menu-card-art-dump{background:radial-gradient(ellipse at 58% 38%,#511321 0%,#2e0712 48%,#160309 100%);--menu-stroke-tint:rgba(255,133,158,.2)}
+.menu-card-art-ideas{background:radial-gradient(ellipse at 58% 38%,#511321 0%,#2e0712 48%,#160309 100%);--menu-stroke-tint:rgba(255,133,158,.2)}
 .menu-card-art-reminders{background:linear-gradient(180deg,#0d8373 0%,#065a4f 100%);--menu-stroke-tint:rgba(163,141,255,.2)}
 .menu-card-art .menu-card-label{position:absolute;top:121px;left:50%;display:block;width:max-content;max-width:none;margin:0;padding:0;transform:translateX(-50%);font-family:-apple-system,BlinkMacSystemFont,'SF Pro',sans-serif;font-size:20px;font-weight:500;line-height:normal;letter-spacing:.2344px;color:#fff;text-align:center;white-space:nowrap;z-index:2}
 .menu-card-art-focus .menu-card-label{left:117px}
 .menu-card-art-pins .menu-card-label{left:106.5px}
-.menu-card-art-dump .menu-card-label{left:120px}
+.menu-card-art-ideas .menu-card-label{left:120px}
 .menu-card-art-reminders .menu-card-label{left:90px}
 .menu-card-art .menu-card-icon{left:17px;top:17px;z-index:2}
 .menu-task-glow-one{left:-11px;top:-3px;mix-blend-mode:plus-lighter}
@@ -100,3 +100,7 @@
 .menu-screenshot-action{display:inline-flex;align-items:center;gap:7px;min-height:30px;margin-block-start:12px;padding:5px 9px;border:1px solid var(--panda-border);border-radius:7px;background:var(--panda-surface);color:var(--panda-text-secondary);font:inherit;font-size:10px}
 .menu-screenshot-action:focus-visible{outline:2px solid var(--panda-focus);outline-offset:2px}
 @media(hover:hover){.menu-screenshot-action:hover{background:var(--panda-surface-raised);color:var(--panda-text-primary)}}
+
+
+.menu-card-art-dump{background:linear-gradient(145deg,#24272d,#121315);--menu-stroke-tint:#ffffff18}
+.menu-notes-sheet{inset:43px 25px 28px 42px;border:1px solid #ffffff20;border-radius:10px;transform:rotate(-9deg);background:repeating-linear-gradient(transparent 0 12px,#ffffff16 12px 13px) 13px 10px/calc(100% - 26px) calc(100% - 20px) no-repeat,linear-gradient(155deg,#3e424a,#23262c);box-shadow:7px 5px 0 -1px #3a3e457d}

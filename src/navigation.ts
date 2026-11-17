@@ -4,7 +4,8 @@ export const featureViews=[
  {id:'tracker',title:'Tracker',tabLabel:'Tracker'},
  {id:'focus',title:'Focus',tabLabel:'Focus'},
  {id:'pins',title:'All links',tabLabel:'All links'},
- {id:'dump',title:'Ideas',tabLabel:'Ideas'},
+ {id:'ideas',title:'Ideas',tabLabel:'Ideas'},
+ {id:'dump',title:'Notes',tabLabel:'Notes'},
  {id:'reminders',title:'Reminders',tabLabel:'Reminders'},
 ] as const;
 export const navigationOptions=[{value:'today',label:'Menu'},...featureViews.map(view=>({value:view.id,label:view.tabLabel}))];
