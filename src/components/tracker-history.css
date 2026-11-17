@@ -1,0 +1,78 @@
+.tracker-history-month {
+  max-width: 620px;
+  margin-inline: auto;
+}
+
+.tracker-history-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-end: 9px;
+}
+
+.tracker-history-filter label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--panda-text-muted);
+  font-size: 10px;
+}
+
+.tracker-history-filter select {
+  min-width: 0;
+  max-width: min(100%, 210px);
+  min-height: 26px;
+  padding: 3px 6px;
+  border: 1px solid var(--panda-border);
+  border-radius: 6px;
+  background: var(--panda-surface-inset);
+  color: var(--panda-text-primary);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.tracker-history-goal {
+  flex: none;
+  color: var(--panda-text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-history-summary {
+  margin: 0;
+  color: var(--panda-text-muted);
+  font-size: 10px;
+}
+
+.tracker-history-month .month-progress-day {
+  aspect-ratio: auto;
+  width: 100%;
+  height: clamp(50px, 9vw, 66px);
+}
+
+.tracker-history-month .month-day-progress,
+.tracker-history-month .month-day-progress svg {
+  width: 28px;
+  height: 28px;
+}
+
+.tracker-history-month .month-progress-date { pointer-events: none; }
+.tracker-history-month button.month-progress-day { cursor: pointer; }
+
+.tracker-history-month button.month-progress-day:focus-visible,
+.tracker-history-filter select:focus-visible {
+  outline: 2px solid var(--panda-focus);
+  outline-offset: -2px;
+}
+
+.tracker-history-empty {
+  color: var(--panda-text-muted);
+  margin-block: 12px;
+}
+
+@media (hover: hover) {
+  .tracker-history-month button.month-progress-day:hover { background: var(--panda-surface); }
+}

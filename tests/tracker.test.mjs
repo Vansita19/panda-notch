@@ -91,3 +91,41 @@ test('recorded date history sorts chronologically and counts only checked slots'
  assert.equal(trackerCount(state.trackers[0],today),2);assert.equal(trackerCount(state.trackers[0],yesterday),0);
  assert.deepEqual(recordedTrackerDays(state.trackers),[today,'2026-10-4','2026-2-3']);
 });
+
+test('duration goals save minutes independently by date, including exercise beyond the goal', () => {
+ let state = check(fresh(), 2);
+ state = reduce(state, {type:'addTracker', title:'Exercise', kind:'duration', goalMinutes:30}, now);
+ const {id} = state.trackers[1];
+ const log = (day,minutes) => { state = reduce(state, {type:'trackerDuration', id, day, minutes}, now); };
+ log(yesterday, 17);
+ log(today, 45);
+ const restored = restore(JSON.parse(JSON.stringify(state)), now);
+ assert.deepEqual(restored.trackers[1], {
+  id, title:'Exercise', kind:'duration', goalMinutes:30, created:now,
+  days:{[yesterday]:17, [today]:45},
+ });
+ assert.equal(restored.trackers[0].days[today], 1 << 2);
+ log(today, 0);
+ assert.equal(state.trackers[1].days[today], 0, 'clearing minutes records zero for that day');
+ assert.equal(state.trackers[1].days[yesterday], 17);
+});
+
+test('minutes cannot rewrite checkbox history or enter a future date', () => {
+ const state = reduce(fresh(), {type:'addTracker', title:'Exercise', kind:'duration', goalMinutes:30}, now);
+ const exercise = state.trackers[1];
+ const duration = {type:'trackerDuration', id:exercise.id, day:today, minutes:12};
+ for(const invalid of [
+  {...duration, id:'job-applications'},
+  {...duration, day:'2026-10-27'},
+  {...duration, minutes:-1},
+  {...duration, minutes:1.5},
+  {...duration, minutes:'12'},
+  {...duration, minutes:1441},
+  {type:'trackerCheck',id:exercise.id,day:today,slot:0,checked:true},
+  {type:'addTracker',title:'No goal',kind:'duration',goalMinutes:0},
+ ]) assert.strictEqual(reduce(state, invalid, now), state);
+
+ const badDuration = {...exercise, days:{[today]:1441}};
+ assert.throws(() => validateState({...state, trackers:[badDuration]}), /not a valid Panda file/);
+ assert.throws(() => validateState({...state, trackers:[{...exercise, id:'job-applications'}]}), /not a valid Panda file/);
+});
