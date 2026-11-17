@@ -7,21 +7,36 @@ const encoder = new TextEncoder();
 const fields = ['id', 'title', 'notes', 'links', 'created', 'updated'];
 const appearanceFields = ['icon', 'color'];
 export const projectIdeaColors = ['lavender', 'mint', 'peach', 'blue', 'rose', 'amber'];
+export const projectIdeaSymbols = [
+ {id:'layers', label:'Layers'},
+ {id:'palette', label:'Palette'},
+ {id:'leaf', label:'Leaf'},
+ {id:'headphones', label:'Headphones'},
+ {id:'compass', label:'Compass'},
+ {id:'gamepad', label:'Gamepad'},
+ {id:'book', label:'Book'},
+ {id:'sparkles', label:'Sparkles'},
+ {id:'code', label:'Code'},
+ {id:'heart', label:'Heart'},
+ {id:'zap', label:'Lightning'},
+ {id:'utensils', label:'Food'},
+];
 export const projectIdeaIcons = ['✨', '🌱', '🎨', '🧩', '🚀', '🪴', '🎧', '🧭', '📚', '💡', '🌊', '🍊', '🪐', '🎮', '🛠️', '💻'];
 export const validProjectIdeaIcon = value =>
  typeof value === 'string' && value === value.trim() && value.length > 0 &&
- value.length <= 32 && !/[\x00-\x1f\x7f]/.test(value);
+ value.length <= 32 && !/[\x00-\x1f\x7f]/.test(value) &&
+ (!value.startsWith('symbol:') || projectIdeaSymbols.some(symbol => value === `symbol:${symbol.id}`));
 
 const appearanceRules = [
- {words:/garden|plant|grow|nature|eco|sustain|habit|wellness/i, icon:'🌱', color:'mint'},
- {words:/music|audio|sound|playlist|podcast/i, icon:'🎧', color:'lavender'},
- {words:/design|art|draw|paint|creativ|portfolio|studio/i, icon:'🎨', color:'peach'},
- {words:/travel|trip|map|explore|adventure|wander/i, icon:'🧭', color:'blue'},
- {words:/game|play|fun|arcade/i, icon:'🎮', color:'rose'},
- {words:/read|book|learn|study|course/i, icon:'📚', color:'amber'},
- {words:/space|star|cosm|planet/i, icon:'🪐', color:'lavender'},
- {words:/food|cook|recipe|meal/i, icon:'🍊', color:'peach'},
- {words:/web|app|code|tool|build|software/i, icon:'🧩', color:'blue'},
+ {words:/garden|plant|grow|nature|eco|sustain|habit|wellness/i, icon:'symbol:leaf', color:'mint'},
+ {words:/music|audio|sound|playlist|podcast/i, icon:'symbol:headphones', color:'lavender'},
+ {words:/design|art|draw|paint|creativ|portfolio|studio/i, icon:'symbol:palette', color:'peach'},
+ {words:/travel|trip|map|explore|adventure|wander/i, icon:'symbol:compass', color:'blue'},
+ {words:/game|play|fun|arcade/i, icon:'symbol:gamepad', color:'rose'},
+ {words:/read|book|learn|study|course/i, icon:'symbol:book', color:'amber'},
+ {words:/space|star|cosm|planet/i, icon:'symbol:sparkles', color:'lavender'},
+ {words:/food|cook|recipe|meal/i, icon:'symbol:utensils', color:'peach'},
+ {words:/web|app|code|tool|build|software|component|library|interface|prototype/i, icon:'symbol:layers', color:'blue'},
 ];
 
 export function projectIdeaAppearance(idea) {
@@ -30,7 +45,7 @@ export function projectIdeaAppearance(idea) {
  let hash = 0;
  for (const character of idea.id ?? text) hash = (hash * 31 + character.codePointAt(0)) >>> 0;
  return {
-  icon:validProjectIdeaIcon(idea.icon) ? idea.icon : match?.icon ?? projectIdeaIcons[hash % projectIdeaIcons.length],
+  icon:validProjectIdeaIcon(idea.icon) ? idea.icon : match?.icon ?? `symbol:${projectIdeaSymbols[hash % projectIdeaSymbols.length].id}`,
   color:projectIdeaColors.includes(idea.color) ? idea.color : match?.color ?? projectIdeaColors[hash % projectIdeaColors.length],
  };
 }

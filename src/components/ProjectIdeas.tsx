@@ -3,7 +3,8 @@ import type {FormEvent} from 'react';
 import {ArrowLeft, ArrowUpRight, Check, Link2, Pencil, Plus, Trash2, X} from 'lucide-react';
 import {Button} from '../arc/button/button';
 import {host, native} from '../bridge';
-import {projectIdeaLimits, projectIdeaLink, projectIdeaAppearance, projectIdeaColors, projectIdeaIcons, validProjectIdeaIcon} from '../project-ideas.mjs';
+import {projectIdeaLimits, projectIdeaLink, projectIdeaAppearance, projectIdeaColors, projectIdeaIcons, projectIdeaSymbols, validProjectIdeaIcon} from '../project-ideas.mjs';
+import {ProjectIdeaIcon} from './ProjectIdeaIcon';
 import './project-ideas.css';
 
 export type IdeaColor = 'lavender' | 'mint' | 'peach' | 'blue' | 'rose' | 'amber';
@@ -186,7 +187,7 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
                 <button type="button" className="project-idea-card" data-color={appearance.color}
                   aria-label={idea.title} aria-current={preview?.id === idea.id ? 'true' : undefined}
                   onClick={() => openIdea(idea.id)}>
-                  <span className="project-idea-emblem" aria-hidden="true"><span>{appearance.icon}</span></span>
+                  <span className="project-idea-emblem"><ProjectIdeaIcon icon={appearance.icon} /></span>
                   <span className="project-idea-card-copy">
                     <strong>{idea.title}</strong>
                     {idea.notes.trim() && <span className="project-idea-card-preview">{idea.notes}</span>}
@@ -208,19 +209,26 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
             <fieldset className="project-idea-appearance" data-color={draftAppearance!.color}>
               <legend>Project icon</legend>
               <div className="project-idea-icon-edit">
-                <span className="project-idea-emblem" aria-hidden="true"><span>{draftAppearance!.icon}</span></span>
+                <span className="project-idea-emblem"><ProjectIdeaIcon icon={draftAppearance!.icon} /></span>
                 <label className="project-idea-field">
                   Icon or emoji
-                  <input name="icon" value={draft.icon ?? draftAppearance!.icon} maxLength={32}
+                  <input name="icon" value={draftAppearance!.icon.startsWith('symbol:') ? '' : draft.icon ?? draftAppearance!.icon} maxLength={32} placeholder="Paste an emoji"
                     aria-invalid={error?.field === 'icon' || undefined} aria-describedby={error?.field === 'icon' ? errorId : undefined}
                     onChange={event => changeField('icon', event.target.value)} />
                 </label>
               </div>
-              <div className="project-idea-emoji-options" role="group" aria-label="Choose a project icon">
+              <div className="project-idea-symbol-options" role="group" aria-label="Choose a project symbol">
+                {projectIdeaSymbols.map((symbol: {id: string; label: string}) => <button key={symbol.id} type="button"
+                  aria-label={`Use ${symbol.label} icon`} title={symbol.label}
+                  aria-pressed={draftAppearance!.icon === `symbol:${symbol.id}`} onClick={() => changeField('icon', `symbol:${symbol.id}`)}>
+                  <ProjectIdeaIcon icon={`symbol:${symbol.id}`} />
+                </button>)}
+              </div>
+              <div className="project-idea-emoji-options" role="group" aria-label="Choose a project emoji">
                 {projectIdeaIcons.map((icon: string) => <button key={icon} type="button" aria-label={`Use ${icon} icon`}
                   aria-pressed={draftAppearance!.icon === icon} onClick={() => changeField('icon', icon)}>{icon}</button>)}
               </div>
-              <div className="project-idea-color-options" role="group" aria-label="Card color">
+              <div className="project-idea-color-options" role="group" aria-label="Icon color">
                 {projectIdeaColors.map((color: IdeaColor) => <button key={color} type="button" data-color={color}
                   aria-label={`Use ${color} color`} title={color.charAt(0).toUpperCase() + color.slice(1)}
                   aria-pressed={draftAppearance!.color === color} onClick={() => setDraft(current => current && {...current, color})}>
@@ -271,7 +279,7 @@ export function ProjectIdeas({ideas, onSave, onDelete, wide = false, session}: P
             <header className="project-idea-detail-heading">
               <div className="project-idea-identity">
                 <button type="button" className="project-idea-emblem" aria-label="Change project icon" title="Change icon"
-                  onClick={() => startEditing(preview, 'icon')}><span aria-hidden="true">{previewAppearance!.icon}</span></button>
+                  onClick={() => startEditing(preview, 'icon')}><ProjectIdeaIcon icon={previewAppearance!.icon} /></button>
                 <h2 ref={detailTitle} tabIndex={-1}>{preview.title}</h2>
               </div>
               <div className="project-idea-detail-actions">

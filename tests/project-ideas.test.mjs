@@ -63,7 +63,7 @@ test('custom idea icons and colors survive edits, native-style backups, deletion
  state = reduce(state, {type:'saveProjectIdea',idea:{id,title:'Windowsill garden',notes:'Three seedlings',links:[]}}, now+1);
  assert.equal(state.projectIdeas[0].icon, '🪴');
  assert.equal(state.projectIdeas[0].color, 'mint');
- const updated = reduce(state, {type:'saveProjectIdea',idea:{...draft,icon:'🌷',color:'rose'}}, now+2);
+ const updated = reduce(state, {type:'saveProjectIdea',idea:{...draft,icon:'symbol:palette',color:'rose'}}, now+2);
  const sorted = JSON.stringify(updated, (_key,value) =>
   value && typeof value==='object' && !Array.isArray(value)
    ? Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)))
@@ -79,7 +79,7 @@ test('legacy ideas receive a stable appearance and reject malformed saved appear
  const {projectIdeaAppearance,saveProjectIdea,validProjectIdeas} = await import('../src/project-ideas.mjs');
  const original = {id,title:'Window garden',notes:'',links:[],created:now,updated:now};
  const before = structuredClone(original);
- assert.deepEqual(projectIdeaAppearance(original),{icon:'🌱',color:'mint'});
+ assert.deepEqual(projectIdeaAppearance(original),{icon:'symbol:leaf',color:'mint'});
  assert.deepEqual(original,before);
  assert.equal(validProjectIdeas([original]),true);
  for(const icon of ['', 'x'.repeat(33), 'a\nb', 42]) {
@@ -87,4 +87,6 @@ test('legacy ideas receive a stable appearance and reject malformed saved appear
  }
  assert.throws(()=>saveProjectIdea([original],{...original,color:'unknown'},now+1));
  assert.equal(validProjectIdeas([{...original,icon:'💡',color:'blue'}]),true);
+ assert.equal(validProjectIdeas([{...original,icon:'symbol:layers',color:'blue'}]),true);
+ assert.equal(validProjectIdeas([{...original,icon:'symbol:unknown',color:'blue'}]),false);
 });
