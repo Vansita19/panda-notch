@@ -1,4 +1,5 @@
 .project-ideas {
+  --idea-card-height: 122px;
   container: project-ideas / inline-size;
   min-width: 0;
   width: 100%;
@@ -34,8 +35,20 @@
 .project-ideas[data-showing-idea="true"] .project-ideas-library { display: none; }
 .project-ideas-library ul,
 .project-idea-saved-links ul { list-style: none; margin: 0; padding: 0; }
-.project-ideas-library ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.project-ideas-library ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: var(--idea-card-height); gap: 10px; }
 .project-ideas-library li { min-width: 0; }
+
+/* Two full rows and a glimpse of the next pair in the compact notch. */
+.project-ideas[data-wide="false"][data-showing-idea="false"] .project-ideas-library {
+  max-block-size: calc(var(--idea-card-height) * 2 + 48px);
+  padding: 3px;
+  margin: -3px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panda-border-strong) transparent;
+}
 
 .project-ideas-empty {
   padding: 32px 10px;
@@ -53,15 +66,15 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 13px;
+  gap: 8px;
   isolation: isolate;
   width: 100%;
-  min-height: 150px;
+  min-height: var(--idea-card-height);
   height: 100%;
-  padding: 14px;
+  padding: 12px;
   overflow: hidden;
   border: 1px solid var(--panda-border);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--panda-surface-inset);
   color: var(--panda-text-primary);
   text-align: start;
@@ -87,6 +100,9 @@
 
 .project-idea-emblem > .project-idea-emoji { display: block; font-size: 25px; }
 .project-idea-glyph { display: block; flex: none; }
+.project-idea-card .project-idea-emblem { width: 32px; height: 32px; }
+.project-idea-card .project-idea-glyph { width: 18px; height: 18px; }
+.project-idea-card .project-idea-emoji { font-size: 20px; }
 .project-idea-card-copy { display: flex; flex-direction: column; gap: 5px; min-width: 0; width: 100%; }
 .project-idea-card-copy strong {
   display: -webkit-box;
@@ -102,7 +118,7 @@
 .project-idea-card-preview {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   overflow: hidden;
   color: var(--panda-text-muted);
   font-size: 10px;
