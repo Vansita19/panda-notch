@@ -126,3 +126,22 @@ test('resting width fits just the panda and menu while keeping both outside the 
  assert.ok((notch.restingNotchWidth(180,true)-180-24)/2>=74,'a running countdown stays outside the camera');
  assert.equal(notch.restingNotchWidth(undefined,false),width);
 });
+
+test('a compact task count and menu fit together outside either physical camera size',()=>{
+ for(const camera of [180,240]){
+  const count='0/10',width=notch.restingNotchWidth(camera,false,count);
+  const usableWing=(width-camera-24)/2;
+  assert.equal(width,camera+156);
+  assert.ok(usableWing>=24+6+count.length*7+8,'menu, gap and padded count stay outside the camera');
+ }
+});
+
+test('task counts preserve timer clearance and larger totals grow both wings safely',()=>{
+ assert.equal(notch.restingNotchWidth(180,true,'0/10'),notch.restingNotchWidth(180,true));
+ const count='5000/5000',idle=notch.restingNotchWidth(180,false,count),running=notch.restingNotchWidth(180,true,count);
+ assert.equal(idle,406);
+ assert.equal(running,idle);
+ assert.ok((running-180-24)/2>=Math.max(74,24+6+count.length*7+8));
+ assert.equal(notch.restingNotchWidth(undefined,false,'0/10'),336);
+ assert.equal(notch.restingNotchWidth(180,false,''),252);
+});

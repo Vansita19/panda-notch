@@ -1,7 +1,9 @@
 // Equal wings keep every control outside the physical camera cutout.
-export function restingNotchWidth(notchWidth=180,timerRunning=false){
+export function restingNotchWidth(notchWidth=180,timerRunning=false,taskCount=''){
  const camera=Number.isFinite(notchWidth)&&notchWidth>0?notchWidth:180;
- return Math.ceil(camera+(timerRunning?172:72));
+ const countWing=typeof taskCount==='string'&&taskCount.length?24+6+taskCount.length*7+8:24;
+ const wing=Math.max(timerRunning?74:24,countWing);
+ return Math.ceil(camera+24+wing*2);
 }
 // One interruptible clip reveal keeps text at its real layout size.
 // The native window reserves the painted extent until contraction finishes.

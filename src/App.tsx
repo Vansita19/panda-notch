@@ -7,6 +7,7 @@ import SegmentedControl from './arc/segmented-control/segmented-control';
 import {Checkbox} from './arc/checkbox/checkbox';
 import {ResizeCorners} from './components/ResizeCorners';
 import {WorkspaceAction} from './components/WorkspaceAction';
+import {ClosedTaskCount} from './components/ClosedTaskCount';
 import {TaskPlanner} from './components/TaskPlanner';
 import {MonthTaskProgress,TodoPeriodSwitch,type TodoPeriod} from './components/MonthTaskProgress';
 import {TaskPriority} from './components/TaskPriority';
@@ -30,7 +31,7 @@ import {saveProjectIdea} from './project-ideas.mjs';
 import {FocusTimer} from './components/FocusTimer';
 import {CalendarNotice} from './components/CalendarNotice';
 import {Panda,PandaBanner} from './components/Panda';
-import {initialState,reduce,advance,remaining,restore,durations,validateState,visibleTasks,shouldPlayReminder,reminderDisplayMs,resumeView,openingView} from './model.mjs';
+import {initialState,reduce,advance,remaining,restore,durations,validateState,visibleTasks,taskProgress,shouldPlayReminder,reminderDisplayMs,resumeView,openingView} from './model.mjs';
 import {host,native} from './bridge';
 import {playPandaSound} from './sounds';
 import {useNotchMotion} from './useNotchMotion';
@@ -145,7 +146,8 @@ export default function App(){
  const inlineAlert=calendarAlert?null:s.alert;
  const expanded=open||closing||!!inlineAlert||!!petLine;
  const openPanelWidth=Math.min(planning&&tab==='tasks'&&(open||closing)?(s.settings.notchSize?.width||400)*2:s.settings.notchSize?.width||400,screen.availWidth-60);
- const panelWidth=open||inlineAlert||petLine?openPanelWidth:Math.min(restingNotchWidth(config.notchWidth,s.timer.running),screen.availWidth-60);
+ const todayProgress=taskProgress(s,now),closedTaskLabel=todayProgress.total?`${todayProgress.done}/${todayProgress.total}`:'';
+ const panelWidth=open||inlineAlert||petLine?openPanelWidth:Math.min(restingNotchWidth(config.notchWidth,s.timer.running,closedTaskLabel),screen.availWidth-60);
  const next=s.events.filter((e:any)=>e.end>now).sort((a:any,b:any)=>a.start-b.start)[0],seconds=remaining(s.timer,now);
  const measureCompactPlanner=useCallback(()=>{
   if(compactPaintHeight.current!==null)return compactPaintHeight.current;
@@ -247,7 +249,7 @@ export default function App(){
  <div className="notch-surface" ref={surface}><i className="notch-corner notch-corner-left" aria-hidden="true"/><i className="notch-corner notch-corner-right" aria-hidden="true"/><div className="notch-visual" ref={visual}><div className="notch-layout" ref={layout} onPointerDownCapture={e=>{if(openRef.current&&(e.target as HTMLElement).matches('input,textarea,select'))host('focus');}} onFocusCapture={e=>{if(e.target.matches('input,textarea,select'))host('focus');}}>
  {open&&!workspaceOpen&&<ResizeCorners layout={layout} onSave={(notchSize:any)=>{setManualHeightView(notchSize?contentView:null);dispatch({type:'settings',patch:{notchSize}});}}/>}
  <TaskCompletionCelebration key={completionPulse} active={open&&completionPulse>0} reducedMotion={s.settings.reducedMotion}/>
- <div className="notch-rail" onClick={e=>{if((e.target as HTMLElement).closest('button'))return;open?close():expand();}}><div className="rail-leading">{music&&s.settings.musicEnabled&&!open?<button className="music-buddy" aria-label={`Open Spotify: ${music.title} by ${music.artist}`} title={`${music.title} · ${music.artist}`} onClick={()=>host('openSpotify')}>{music.artwork?<img src={music.artwork} alt="Album cover"/>:<span className="music-cover-fallback">♫</span>}<span className="music-bars" data-playing={music.playing} aria-hidden="true">{[0,1,2,3,4].map(i=><i key={i} style={{'--bar-delay':`${i*-.17}s`} as React.CSSProperties}/>)}</span></button>:<button className="buddy-button" onClick={sayHi} aria-label={`Say hi to ${mascotName}`}><Panda key={petLine} name={mascotName} mini mood={celebrate?'happy':s.settings.quiet?'sleep':'idle'}/></button>}{!open&&s.timer.running&&<button className="closed-timer" onClick={()=>expand('focus')} aria-label={`Open timer, ${fmt(seconds)} remaining`}>{fmt(seconds)}</button>}</div><div className="camera-space" aria-hidden="true" style={{minWidth:config.notchWidth||180}}/><div className="rail-menu"><Button variant="ghost" size="sm" className="menu-toggle" data-state={open?'open':'closed'} aria-expanded={open} onClick={e=>{e.stopPropagation();openRef.current?close():expand();}} aria-label={open?'Close menu':'Open menu'}><span className="menu-lines" data-open={open} aria-hidden="true"><span/><span/></span></Button></div></div>
+ <div className="notch-rail" onClick={e=>{if((e.target as HTMLElement).closest('button'))return;open?close():expand();}}><div className="rail-leading">{music&&s.settings.musicEnabled&&!open?<button className="music-buddy" aria-label={`Open Spotify: ${music.title} by ${music.artist}`} title={`${music.title} · ${music.artist}`} onClick={()=>host('openSpotify')}>{music.artwork?<img src={music.artwork} alt="Album cover"/>:<span className="music-cover-fallback">♫</span>}<span className="music-bars" data-playing={music.playing} aria-hidden="true">{[0,1,2,3,4].map(i=><i key={i} style={{'--bar-delay':`${i*-.17}s`} as React.CSSProperties}/>)}</span></button>:<button className="buddy-button" onClick={sayHi} aria-label={`Say hi to ${mascotName}`}><Panda key={petLine} name={mascotName} mini mood={celebrate?'happy':s.settings.quiet?'sleep':'idle'}/></button>}{!open&&s.timer.running&&<button className="closed-timer" onClick={()=>expand('focus')} aria-label={`Open timer, ${fmt(seconds)} remaining`}>{fmt(seconds)}</button>}</div><div className="camera-space" aria-hidden="true" style={{minWidth:config.notchWidth||180}}/><div className="rail-menu">{!open&&<ClosedTaskCount done={todayProgress.done} total={todayProgress.total} onOpen={()=>{pendingTodoPeriod.current=null;setTodoPeriod('today');expand('tasks');}}/>}<Button variant="ghost" size="sm" className="menu-toggle" data-state={open?'open':'closed'} aria-expanded={open} onClick={e=>{e.stopPropagation();openRef.current?close():expand();}} aria-label={open?'Close menu':'Open menu'}><span className="menu-lines" data-open={open} aria-hidden="true"><span/><span/></span></Button></div></div>
  {!open&&petLine&&!inlineAlert&&<div className="panda-speech t-panel-enter" role="status" key={petLine}>{petLine}</div>}
  {inlineAlert&&(inlineAlert.kind==='wellness'?<PandaBanner name={mascotName} alert={inlineAlert} duration={reminderDisplayMs(s)} onDone={()=>dispatch({type:'dismissAlert',id:inlineAlert.id})}/>:<div className="timer-alert" role="status"><div className="timer-alert-copy"><strong>{inlineAlert.title}</strong><span>{inlineAlert.sub}</span></div><Button variant="secondary" size="sm" onClick={()=>{dispatch({type:'dismissAlert',id:inlineAlert.id});expand('focus');}}>See timer</Button></div>)}
  {(open||closing)&&<div className="open-content" inert={closing&&!open}>

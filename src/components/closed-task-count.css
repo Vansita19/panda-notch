@@ -1,0 +1,25 @@
+.rail-menu:has(.closed-task-count) { width: auto; gap: 6px; }
+.closed-task-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: calc(var(--task-count-chars) * 7px + 8px);
+  min-width: 0;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--panda-text-primary);
+  font: 550 11px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.closed-task-count-divider { color: var(--panda-text-muted); }
+.closed-task-count[data-complete="true"] { color: var(--mint); }
+.closed-task-count:focus-visible { outline: 2px solid var(--panda-focus); outline-offset: 1px; }
+@media (hover: hover) {
+  .closed-task-count:hover { background: var(--panda-surface); }
+}
