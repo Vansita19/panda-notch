@@ -1,0 +1,250 @@
+---
+const portfolio = 'https://vansita.design/';
+const linkedin = 'https://www.linkedin.com/in/vansita/';
+const gfv = 'https://contra.com/p/AQcLYsEg-growth-factory-ventures-brand-identity-and-website-design';
+const year = new Date().getFullYear();
+const title = 'Vansita Addanki — Product designer';
+const description = 'Vansita Addanki is a product designer in India. Four years taking early-stage products from idea to launch: product UX, design systems, brand and web.';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#F6F3EB" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="data:," />
+    <link rel="preload" href="/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap bar">
+        <p class="id"><span class="id-name">Vansita Addanki</span><span class="id-role">Product designer</span></p>
+        <nav aria-label="Primary">
+          <ul>
+            <li><a href="#work">Work</a></li>
+            <li><a href="#approach">Approach</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a class="portfolio" href={portfolio} target="_blank" rel="noopener noreferrer">View portfolio<span class="sr"> (opens in a new tab)</span></a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <h1 id="hero-title">Designing how people work with <em>AI.</em></h1>
+        <div class="hero-side">
+          <p class="lede">Four years taking early-stage products from idea to launch. I shape product direction, design the experience and build the systems that help it grow.</p>
+          <p class="actions">
+            <a class="primary" href="#work">Explore my work</a>
+            <a class="secondary" href="#contact">Get in touch</a>
+          </p>
+          <dl class="meta">
+            <div><dt class="sr">Focus</dt><dd>Product UX · Design systems · Brand &amp; web</dd></div>
+            <div><dt class="sr">Location</dt><dd>India · Open to remote work</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="work" class="work wrap" aria-labelledby="work-title">
+        <h2 id="work-title" class="label">Selected work</h2>
+        <ol class="rows">
+          <li class="row row-lead">
+            <span class="num" aria-hidden="true">01</span>
+            <div class="row-head">
+              <h3><a href={portfolio} target="_blank" rel="noopener noreferrer">Pitch Protocol<span class="sr"> (opens in a new tab)</span></a></h3>
+              <p class="role">Founding product designer</p>
+            </div>
+            <div class="row-body">
+              <p class="big">An AI due-diligence workspace used by 30+ VC teams.</p>
+              <p>I shaped the founder and investor experiences, including generative UI, research traceability and collaborative research. Investors could investigate findings, check the supporting sources and carry that context into team decisions.</p>
+              <p>My work included discovery filters, AI-assisted founder onboarding, shared design patterns and frontend UI contributions.</p>
+            </div>
+          </li>
+          <li class="row">
+            <span class="num" aria-hidden="true">02</span>
+            <div class="row-head">
+              <h3><a href={portfolio} target="_blank" rel="noopener noreferrer">TurboML<span class="sr"> (opens in a new tab)</span></a></h3>
+              <p class="role">Product design</p>
+            </div>
+            <div class="row-body">
+              <p>Data and model workflows for ML engineers. I made technical, information-heavy interfaces easier to understand while preserving the control users needed.</p>
+            </div>
+          </li>
+          <li class="row">
+            <span class="num" aria-hidden="true">03</span>
+            <div class="row-head">
+              <h3><a href={gfv} target="_blank" rel="noopener noreferrer">Growth Factory Ventures<span class="sr"> (opens in a new tab)</span></a></h3>
+              <p class="role">Brand &amp; website</p>
+            </div>
+            <div class="row-body">
+              <p>I created a shared identity for the firm's investment and venture-building offerings, designed and built its website in Framer, and extended that system into reports, marketing and brand guidelines.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="approach" class="approach wrap" aria-labelledby="approach-title">
+        <h2 id="approach-title" class="label">Approach</h2>
+        <div class="approach-body">
+          <ol class="steps">
+            <li>Find the problem worth solving.</li>
+            <li>Make the important decisions clear.</li>
+            <li>Build patterns that stay useful as the product develops.</li>
+          </ol>
+          <p class="support">My work connects product thinking and visual craft, with prototypes and frontend UI contributions to carry decisions into what ships.</p>
+        </div>
+      </section>
+
+      <section id="contact" class="contact wrap" aria-labelledby="contact-title">
+        <h2 id="contact-title" class="label">Contact</h2>
+        <div class="contact-body">
+          <p class="contact-head">Let's build something useful.</p>
+          <p>Explore my portfolio or reach me on LinkedIn.</p>
+          <p class="actions">
+            <a class="primary" href={portfolio} target="_blank" rel="noopener noreferrer">Portfolio<span class="sr"> (opens in a new tab)</span></a>
+            <a class="secondary" href={linkedin} target="_blank" rel="noopener noreferrer">LinkedIn<span class="sr"> (opens in a new tab)</span></a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>© {year} Vansita Addanki</p>
+        <p>Built with Fredrin</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  @font-face { font-family: 'Instrument Serif'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/instrument-serif-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; font-display: swap; src: url('/fonts/instrument-serif-latin-400-italic.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/inter-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/inter-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/inter-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); }
+
+  :root {
+    --bg: #F6F3EB;
+    --ink: #202322;
+    --soft: #4d514f; /* ~7.4:1 on ivory */
+    --accent: #E85130;
+    --rule: #20232233;
+    --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --gutter: clamp(20px, 5vw, 48px);
+    --header-h: 72px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--sans); text-wrap: pretty; overflow-x: hidden; }
+  h1, h2, h3, p, ul, ol, dl, dd { margin: 0; padding: 0; }
+  ul, ol { list-style: none; }
+  a { color: inherit; }
+
+  .wrap { width: 100%; max-width: calc(1120px + var(--gutter) * 2); margin-inline: auto; padding-inline: var(--gutter); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
+
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; box-shadow: 0 0 0 6px var(--accent); border-radius: 2px; }
+
+  .skip { position: absolute; left: var(--gutter); top: -100px; z-index: 20; background: var(--ink); color: var(--bg); padding: 12px 16px; min-height: 44px; }
+  .skip:focus { top: 8px; }
+
+  .site-header { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--rule); }
+  .bar { min-height: var(--header-h); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-block: 8px; }
+  .id { display: flex; flex-direction: column; line-height: 1.25; }
+  .id-name { font-weight: 600; font-size: 1rem; }
+  .id-role { font: 400 0.8125rem var(--mono); color: var(--soft); }
+  .bar ul { display: flex; align-items: center; gap: 4px 20px; flex-wrap: wrap; }
+  .bar nav a { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 4px; text-decoration: none; font-size: 1rem; font-weight: 500; }
+  .bar nav a:not(.portfolio):hover { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1px; }
+  .bar nav a.portfolio { border-bottom: 2px solid var(--accent); padding-inline: 0; min-height: 44px; }
+
+  .hero { padding-block: clamp(48px, 9vw, 120px) clamp(56px, 9vw, 112px); display: grid; gap: 40px; }
+  h1 { font: 400 clamp(3rem, 11.5vw, 7.5rem)/0.98 var(--serif); letter-spacing: -0.02em; text-wrap: balance; }
+  h1 em { font-style: italic; color: var(--accent); }
+  .lede { font-size: clamp(1.1875rem, 2.4vw, 1.4375rem); line-height: 1.5; max-width: 34ch; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 28px; align-items: center; }
+  .primary, .secondary { display: inline-flex; align-items: center; min-height: 44px; font-weight: 500; text-decoration: none; padding-block: 4px; }
+  .primary { border-bottom: 2px solid var(--accent); }
+  .primary::after { content: '→'; margin-left: 10px; transition: transform .25s ease; }
+  .primary:hover::after { transform: translateX(4px); }
+  .secondary { border-bottom: 1px solid var(--ink); }
+  .secondary:hover { border-bottom-width: 2px; }
+  .meta { margin-top: 36px; display: grid; gap: 6px; font: 400 0.8125rem/1.5 var(--mono); color: var(--soft); text-transform: none; }
+  .meta dd { margin: 0; }
+
+  .label { font: 400 0.8125rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+
+  .work { padding-block: 24px clamp(64px, 9vw, 112px); }
+  .rows { margin-top: 28px; border-top: 1px solid var(--ink); }
+  .row { display: grid; gap: 14px 20px; grid-template-columns: auto 1fr; padding-block: 32px; border-bottom: 1px solid var(--rule); }
+  .num { font: 400 2rem/1 var(--serif); color: var(--accent); grid-row: 1; padding-top: 4px; }
+  .row-head { grid-column: 2; }
+  .row-body { grid-column: 1 / -1; display: grid; gap: 14px; max-width: 62ch; }
+  h3 { font: 400 clamp(2rem, 6vw, 2.75rem)/1.05 var(--serif); letter-spacing: -0.01em; }
+  h3 a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; text-decoration-color: transparent; text-underline-offset: 8px; text-decoration-thickness: 2px; transition: text-decoration-color .3s ease; }
+  h3 a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+  .role { margin-top: 8px; font: 400 0.8125rem/1.4 var(--mono); color: var(--soft); text-transform: uppercase; letter-spacing: 0.06em; }
+  .row-lead { padding-block: 48px 56px; }
+  .row-lead .num { font-size: 3rem; }
+  .row-lead h3 { font-size: clamp(2.5rem, 9vw, 4.75rem); }
+  .big { font: 400 clamp(1.5rem, 3.4vw, 2rem)/1.2 var(--serif); }
+
+  .approach { padding-block: clamp(56px, 8vw, 104px); position: relative; display: grid; gap: 28px; }
+  .steps { counter-reset: s; display: grid; gap: 8px; }
+  .steps li { counter-increment: s; font: 400 clamp(1.875rem, 5.4vw, 3.5rem)/1.08 var(--serif); letter-spacing: -0.01em; text-wrap: balance; }
+  .support { margin-top: 32px; max-width: 46ch; color: var(--soft); }
+
+  .contact { padding-block: clamp(56px, 8vw, 104px) clamp(72px, 10vw, 128px); position: relative; display: grid; gap: 28px; }
+  .approach::before, .contact::before { content: ''; position: absolute; top: 0; left: var(--gutter); right: var(--gutter); height: 1px; background: var(--rule); }
+  .contact::before { background: var(--ink); }
+  .contact-head { font: 400 clamp(2.5rem, 8vw, 5.5rem)/1 var(--serif); letter-spacing: -0.02em; text-wrap: balance; margin-bottom: 20px; }
+
+  .site-footer { border-top: 1px solid var(--rule); padding-block: 28px; font: 400 0.8125rem/1.5 var(--mono); color: var(--soft); }
+  .site-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+
+  @media (min-width: 768px) {
+    :root { --header-h: 76px; }
+    .hero { grid-template-columns: repeat(12, 1fr); column-gap: 24px; }
+    .hero h1 { grid-column: 1 / -1; }
+    .hero-side { grid-column: 6 / -1; }
+    .row { grid-template-columns: 72px minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+    .row-head { grid-column: 2; }
+    .row-body { grid-column: 3; grid-row: 1; }
+    .row-lead { grid-template-columns: 96px minmax(0, 5fr) minmax(0, 7fr); }
+    .approach, .contact { grid-template-columns: 1fr 2.2fr; }
+    .work .label { margin-bottom: 0; }
+  }
+  @media (min-width: 1100px) {
+    .hero { padding-top: 112px; }
+    .hero h1 { grid-column: 1 / 11; }
+    .hero-side { grid-column: 7 / -1; margin-top: 24px; }
+  }
+
+  /* subtle entrance */
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .hero h1, .hero-side, .row { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+  .hero-side { animation-delay: .12s; }
+  .row:nth-child(2) { animation-delay: .1s; }
+  .row:nth-child(3) { animation-delay: .2s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
